@@ -9,7 +9,7 @@ import { useUserStore } from '@/store/useUserStore';
 import QueueCard from '@/components/QueueCard';
 import StatusBadge from '@/components/StatusBadge';
 import { formatTime, generateId } from '@/utils/format';
-import type { QueueItem, QueueStatus } from '@/types';
+import type { QueueItem, QueueStatus, FlowEvent } from '@/types';
 import { MAX_MISSED_COUNT } from '@/utils/booking';
 import styles from './index.module.scss';
 
@@ -23,12 +23,14 @@ const DASHBOARD_STATUS: Array<{ key: QueueStatus | 'all'; label: string; icon: s
 
 const QueuePage: React.FC = () => {
   const { platforms, selectedPlatformId, setSelectedPlatformId } = usePlatformStore();
-  const { queue, getQueueByPlatform, getCurrentCalling, callNext, confirmArrival, markAsMissed, markAsCompleted, addToQueue } = useQueueStore();
-  const { missedRecords, getBookingById, updateBookingStatus, incrementMissedCount, addMissedRecord, getBookingsByGroup, addTimelineEvent } = useBookingStore();
+  const { queue, getQueueByPlatform, getCurrentCalling, callNext, confirmArrival, markAsMissed, markAsCompleted, addToQueue, moveQueueItem, markAsVoid, getFlowByPlatform } = useQueueStore();
+  const { missedRecords, getBookingById, updateBookingStatus, incrementMissedCount, addMissedRecord, getBookingsByGroup, addTimelineEvent, markAsVoid: markBookingAsVoid } = useBookingStore();
   const { currentGroupId, userName } = useUserStore();
 
   const [adminMode, setAdminMode] = useState(true);
   const [statusFilter, setStatusFilter] = useState<QueueStatus | 'all' | null>(null);
+  const [flowModalVisible, setFlowModalVisible] = useState(false);
+  const [flowModalPlatformId, setFlowModalPlatformId] = useState<string | null>(null);
 
   useDidShow(() => {
     console.log('[Queue] Page did show, queue length:', queue.length);
@@ -125,6 +127,18 @@ const QueuePage: React.FC = () => {
     return match?.label || '';
   }, [statusFilter]);
 
+  const flowList = useMemo(() => {
+    if (!flowModalPlatformId) return [];
+    return getFlowByPlatform(flowModalPlatformId).slice(0, 50);
+  }, [flowModalPlatformId, getFlowByPlatform]);
+
+  const currentFlowPlatform = useMemo(() => {
+    if (!flowModalPlatformId) return null;
+    return platforms.find(p => p.id === flowModalPlatformId) || null;
+  }, [flowModalPlatformId, platforms]);
+
+  const operatorName = userName || '现场工作人员';
+
   const handleStatusFilter = (filter: QueueStatus | 'all' | null, platformId?: string) => {
     if (platformId && platformId !== currentPlatform?.id) {
       setSelectedPlatformId(platformId);
@@ -132,11 +146,84 @@ const QueuePage: React.FC = () => {
     setStatusFilter(prev => (prev === filter ? null : filter));
   };
 
+  const handleOpenFlow = (platformId: string) => {
+    setFlowModalPlatformId(platformId);
+    setFlowModalVisible(true);
+  };
+
+  const handleCloseFlow = () => {
+    setFlowModalVisible(false);
+    setFlowModalPlatformId(null);
+  };
+
+  const handleMoveQueue = (queueId: string, direction: 'up' | 'down' | 'tail') => {
+    const ok = moveQueueItem(queueId, direction, operatorName);
+    if (ok) {
+      Taro.showToast({ title: '已调整队列顺序', icon: 'success' });
+    } else {
+      Taro.showToast({ title: '无法调整位置', icon: 'none' });
+    }
+  };
+
+  const handleHandleCriticalMissed = (queueId: string, action: 'requeue' | 'void') => {
+    const item = queue.find(q => q.id === queueId);
+    if (!item || !currentPlatform) return;
+
+    if (action === 'void') {
+      Taro.showModal({
+        title: '确认手动作废',
+        content: `确定将${item.groupName}（第${item.queueNumber}号）作废吗？作废后无法恢复。`,
+        confirmColor: '#F53F3F',
+        success: (res) => {
+          if (res.confirm) {
+            markAsVoid(queueId, operatorName);
+            markBookingAsVoid(item.bookingId, '工作人员手动作废', operatorName);
+            addMissedRecord({
+              id: generateId(),
+              bookingId: item.bookingId,
+              queueId,
+              queueNumber: item.queueNumber,
+              groupName: item.groupName,
+              platformId: currentPlatform.id,
+              platformName: currentPlatform.name,
+              missedAt: new Date().toISOString(),
+              reason: '工作人员手动作废'
+            });
+            Taro.showToast({ title: '已作废', icon: 'none' });
+          }
+        }
+      });
+      return;
+    }
+
+    const result = markAsMissed(queueId, currentPlatform.id, currentPlatform.name, '用户未到', operatorName);
+    const missedResult = incrementMissedCount(item.bookingId, operatorName);
+
+    addMissedRecord({
+      id: generateId(),
+      bookingId: item.bookingId,
+      queueId,
+      queueNumber: item.queueNumber,
+      groupName: item.groupName,
+      platformId: currentPlatform.id,
+      platformName: currentPlatform.name,
+      missedAt: new Date().toISOString(),
+      reason: '用户未到（继续重排）'
+    });
+
+    if (missedResult.shouldVoid) {
+      Taro.showToast({ title: `连续${MAX_MISSED_COUNT}次过号，预约已作废`, icon: 'none', duration: 2500 });
+    } else if (result.movedToTail) {
+      const newMissedCount = item.missedCount + 1;
+      Taro.showToast({ title: `过号重排队尾（${newMissedCount}/${MAX_MISSED_COUNT}）`, icon: 'none' });
+    }
+  };
+
   const handleConfirmArrival = (queueId: string) => {
     const item = queue.find(q => q.id === queueId);
     if (!item) return;
     confirmArrival(queueId);
-    updateBookingStatus(item.bookingId, 'jumping');
+    updateBookingStatus(item.bookingId, 'jumping', undefined, operatorName);
     Taro.showToast({ title: '已确认到场', icon: 'success' });
     console.log('[Queue] Confirmed arrival:', queueId);
   };
@@ -159,8 +246,8 @@ const QueuePage: React.FC = () => {
       confirmColor: '#F53F3F',
       success: (res) => {
         if (res.confirm) {
-          const result = markAsMissed(queueId, currentPlatform.id, currentPlatform.name, '用户未到');
-          const missedResult = incrementMissedCount(item.bookingId);
+          const result = markAsMissed(queueId, currentPlatform.id, currentPlatform.name, '用户未到', operatorName);
+          const missedResult = incrementMissedCount(item.bookingId, operatorName);
 
           addMissedRecord({
             id: generateId(),
@@ -175,14 +262,14 @@ const QueuePage: React.FC = () => {
           });
 
           if (missedResult.shouldVoid) {
-            updateBookingStatus(item.bookingId, 'void');
             Taro.showToast({ title: `连续${MAX_MISSED_COUNT}次过号，预约已作废`, icon: 'none', duration: 2500 });
           } else if (result.movedToTail) {
             const newMissedCount = item.missedCount + 1;
             addTimelineEvent(item.bookingId, {
               type: 'requeued',
               time: new Date().toISOString(),
-              description: `🔁 过号重排队尾（${newMissedCount}/${MAX_MISSED_COUNT}）`
+              description: `🔁 过号重排队尾（${newMissedCount}/${MAX_MISSED_COUNT}）`,
+              operator: operatorName
             });
             Taro.showToast({ title: `过号重排队尾（${newMissedCount}/${MAX_MISSED_COUNT}）`, icon: 'none' });
           } else if (result.voided) {
@@ -198,7 +285,7 @@ const QueuePage: React.FC = () => {
     const item = queue.find(q => q.id === queueId);
     if (!item) return;
     markAsCompleted(queueId);
-    updateBookingStatus(item.bookingId, 'completed');
+    updateBookingStatus(item.bookingId, 'completed', undefined, operatorName);
     Taro.showToast({ title: '已完成', icon: 'success' });
     console.log('[Queue] Marked completed:', queueId);
   };
@@ -211,7 +298,8 @@ const QueuePage: React.FC = () => {
       addTimelineEvent(next.bookingId, {
         type: 'calling',
         time: new Date().toISOString(),
-        description: `📢 开始叫第 ${next.queueNumber} 号`
+        description: `📢 开始叫第 ${next.queueNumber} 号`,
+        operator: operatorName
       });
       console.log('[Queue] Called next:', next.id, next.queueNumber);
     } else {
@@ -358,9 +446,17 @@ const QueuePage: React.FC = () => {
             >
               <View className={styles.platformStatHeader}>
                 <Text className={styles.platformStatName}>{ps.platformName}</Text>
-                <Text className={styles.platformStatActive}>
-                  活动 {ps.active} / 全天 {ps.total}
-                </Text>
+                <View className={styles.platformStatActions}>
+                  <Text className={styles.platformStatActive}>
+                    活动 {ps.active} / 全天 {ps.total}
+                  </Text>
+                  <Text
+                    className={styles.platformStatFlowBtn}
+                    onClick={(e) => { e.stopPropagation(); handleOpenFlow(ps.platformId); }}
+                  >
+                    📋 流水
+                  </Text>
+                </View>
               </View>
               <View className={styles.platformStatRow}>
                 {DASHBOARD_STATUS.map(st => {
@@ -551,15 +647,55 @@ const QueuePage: React.FC = () => {
           <>
             <Text className={styles.sectionSub}>⚠️ 过号重排队（{missedList.length}人）</Text>
             <View className={styles.queueList}>
-              {missedList.map((q: QueueItem) => (
-                <QueueCard
-                  key={q.id}
-                  queue={q}
-                  showActions={adminMode}
-                  onConfirmArrival={() => handleConfirmArrival(q.id)}
-                  onMarkMissed={() => handleMarkMissed(q.id)}
-                />
-              ))}
+              {missedList.map((q: QueueItem) => {
+                const isCritical = q.missedCount === MAX_MISSED_COUNT - 1;
+                return (
+                  <View key={q.id} className={classnames(isCritical && styles.queueCardCritical)}>
+                    <QueueCard
+                      queue={q}
+                      showActions={adminMode && !isCritical}
+                      onConfirmArrival={() => handleConfirmArrival(q.id)}
+                      onMarkMissed={() => handleMarkMissed(q.id)}
+                    />
+                    {adminMode && isCritical && (
+                      <View className={styles.criticalWarning}>
+                        <View className={styles.criticalHeader}>
+                          <Text className={styles.criticalIcon}>🔥</Text>
+                          <Text className={styles.criticalTitle}>第 {q.queueNumber} 号 已过号 {q.missedCount} 次，再错过 1 次将作废</Text>
+                        </View>
+                        <View className={styles.criticalActions}>
+                          <View
+                            className={classnames(styles.criticalBtn, styles.criticalBtnPrimary)}
+                            onClick={() => handleConfirmArrival(q.id)}
+                          >
+                            <Text>✅ 已到场</Text>
+                          </View>
+                          <View
+                            className={classnames(styles.criticalBtn, styles.criticalBtnWarn)}
+                            onClick={() => handleHandleCriticalMissed(q.id, 'requeue')}
+                          >
+                            <Text>🔁 再次过号重排</Text>
+                          </View>
+                          <View
+                            className={classnames(styles.criticalBtn, styles.criticalBtnDanger)}
+                            onClick={() => handleHandleCriticalMissed(q.id, 'void')}
+                          >
+                            <Text>🚫 直接作废</Text>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+                    {adminMode && q.status === 'waiting' && (
+                      <View className={styles.moveActions}>
+                        <Text className={styles.moveLabel}>调整顺序：</Text>
+                        <Text className={styles.moveBtn} onClick={() => handleMoveQueue(q.id, 'up')}>⬆️ 上移</Text>
+                        <Text className={styles.moveBtn} onClick={() => handleMoveQueue(q.id, 'down')}>⬇️ 下移</Text>
+                        <Text className={styles.moveBtn} onClick={() => handleMoveQueue(q.id, 'tail')}>⏬ 队尾</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           </>
         )}
@@ -569,14 +705,38 @@ const QueuePage: React.FC = () => {
             <Text className={styles.sectionSub}>⏳ 等待中（{waitingList.length}人）</Text>
             <View className={styles.queueList}>
               {waitingList.map((q: QueueItem, index: number) => (
-                <QueueCard
-                  key={q.id}
-                  queue={q}
-                  showActions={adminMode}
-                  positionLabel={`第${index + 1}位`}
-                  onConfirmArrival={() => handleConfirmArrival(q.id)}
-                  onMarkMissed={() => handleMarkMissed(q.id)}
-                />
+                <View key={q.id}>
+                  <QueueCard
+                    queue={q}
+                    showActions={adminMode}
+                    positionLabel={`第${index + 1}位`}
+                    onConfirmArrival={() => handleConfirmArrival(q.id)}
+                    onMarkMissed={() => handleMarkMissed(q.id)}
+                  />
+                  {adminMode && (
+                    <View className={styles.moveActions}>
+                      <Text className={styles.moveLabel}>调整顺序：</Text>
+                      <Text
+                        className={classnames(styles.moveBtn, index === 0 && styles.moveBtnDisabled)}
+                        onClick={() => index > 0 && handleMoveQueue(q.id, 'up')}
+                      >
+                        ⬆️ 上移
+                      </Text>
+                      <Text
+                        className={classnames(styles.moveBtn, index === waitingList.length - 1 && styles.moveBtnDisabled)}
+                        onClick={() => index < waitingList.length - 1 && handleMoveQueue(q.id, 'down')}
+                      >
+                        ⬇️ 下移
+                      </Text>
+                      <Text
+                        className={classnames(styles.moveBtn, index === waitingList.length - 1 && styles.moveBtnDisabled)}
+                        onClick={() => index < waitingList.length - 1 && handleMoveQueue(q.id, 'tail')}
+                      >
+                        ⏬ 队尾
+                      </Text>
+                    </View>
+                  )}
+                </View>
               ))}
             </View>
           </>
@@ -646,6 +806,48 @@ const QueuePage: React.FC = () => {
           </>
         )}
       </View>
+
+      {flowModalVisible && (
+        <View className={styles.modalMask} onClick={handleCloseFlow}>
+          <View className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>📋 {currentFlowPlatform?.name || '跳台'} · 今日现场流水</Text>
+              <Text className={styles.modalClose} onClick={handleCloseFlow}>✕</Text>
+            </View>
+            <ScrollView scrollY className={styles.modalBody}>
+              {flowList.length === 0 ? (
+                <View className={styles.emptyState}>
+                  <Text className={styles.emptyIcon}>📋</Text>
+                  <Text className={styles.emptyText}>暂无操作流水</Text>
+                </View>
+              ) : (
+                <View className={styles.flowList}>
+                  {flowList.map((ev: FlowEvent, idx: number) => (
+                    <View key={ev.id} className={styles.flowItem}>
+                      <View className={styles.flowLeft}>
+                        <View className={styles.flowDot} />
+                        {idx < flowList.length - 1 && <View className={styles.flowLine} />}
+                      </View>
+                      <View className={styles.flowContent}>
+                        <Text className={styles.flowDesc}>{ev.description}</Text>
+                        <View className={styles.flowMeta}>
+                          <Text className={styles.flowTime}>{formatTime(ev.time)}</Text>
+                          {ev.operator && (
+                            <Text className={styles.flowOperator}> · {ev.operator}</Text>
+                          )}
+                          {ev.queueNumber && (
+                            <Text className={styles.flowQueue}> · #{ev.queueNumber}</Text>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 };

@@ -585,7 +585,20 @@
 }
 
 .timelineTime {
-  display: block;
+  display: inline;
   font-size: 22rpx;
   color: #86909C;
+}
+
+.timelineMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8rpx;
+}
+
+.timelineOperator {
+  font-size: 22rpx;
+  color: #165DFF;
+  font-weight: 500;
 }

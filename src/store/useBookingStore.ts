@@ -1,19 +1,21 @@
 import { create } from 'zustand';
 import type { Booking, MissedRecord, BookingStatus, TimelineEvent, TimelineEventType } from '@/types';
 import { mockBookings, mockMissedRecords } from '@/data/mockBookings';
-import { splitMergedBooking, handleMissedQueue } from '@/utils/booking';
+import { splitMergedBooking, handleMissedQueue, MAX_MISSED_COUNT } from '@/utils/booking';
 import { generateId, isAdjacentSlots } from '@/utils/format';
 import dayjs from 'dayjs';
 
 const makeTimelineEvent = (
   type: TimelineEventType,
   description?: string,
+  operator?: string,
   extra?: Record<string, any>
 ): TimelineEvent => ({
   id: generateId(),
   type,
   time: new Date().toISOString(),
   description,
+  operator,
   extra
 });
 
@@ -29,8 +31,9 @@ interface BookingState {
   addOrMergeBooking: (booking: Booking) => Booking;
   updateBooking: (id: string, data: Partial<Booking>) => void;
   cancelBooking: (id: string, cancelSlotIds?: string[]) => void;
-  updateBookingStatus: (id: string, status: BookingStatus, description?: string) => void;
-  incrementMissedCount: (id: string) => { shouldVoid: boolean; newMissedCount: number };
+  updateBookingStatus: (id: string, status: BookingStatus, description?: string, operator?: string) => void;
+  incrementMissedCount: (id: string, operator?: string) => { shouldVoid: boolean; newMissedCount: number };
+  markAsVoid: (id: string, reason?: string, operator?: string) => void;
   addMissedRecord: (record: MissedRecord) => void;
   addTimelineEvent: (id: string, event: Omit<TimelineEvent, 'id'>) => void;
   getBookingById: (id: string) => Booking | undefined;
@@ -180,14 +183,17 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         events.push(makeTimelineEvent('health_committed', '已签署健康承诺书'));
       }
       if (data.status && data.status !== b.status) {
-        const map: Partial<Record<BookingStatus, string>> = {
-          queuing: '已进入排队队列',
-          jumping: '正在体验',
-          completed: '体验完成',
-          cancelled: '已取消',
-          void: '预约已作废'
+        const statusToEvent: Partial<Record<BookingStatus, { type: TimelineEventType; label: string }>> = {
+          queuing: { type: 'queued', label: '已进入排队队列' },
+          jumping: { type: 'jumping', label: '正在体验' },
+          completed: { type: 'completed', label: '体验完成' },
+          cancelled: { type: 'cancelled', label: '已取消' },
+          void: { type: 'void', label: '预约已作废' }
         };
-        if (map[data.status]) events.push(makeTimelineEvent(data.status as TimelineEventType, map[data.status]));
+        const mapping = statusToEvent[data.status];
+        if (mapping) {
+          events.push(makeTimelineEvent(mapping.type, mapping.label));
+        }
       }
       if (events.length) next.statusTimeline = [...(b.statusTimeline || []), ...events];
       return next;
@@ -276,7 +282,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     }
   },
 
-  updateBookingStatus: (id, status, description) => set((state) => ({
+  updateBookingStatus: (id, status, description, operator) => set((state) => ({
     bookings: state.bookings.map(b => {
       if (b.id !== id) return b;
       const statusToEvent: Partial<Record<BookingStatus, { type: TimelineEventType; label: string }>> = {
@@ -289,7 +295,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       const events: TimelineEvent[] = [];
       const mapping = statusToEvent[status];
       if (mapping) {
-        events.push(makeTimelineEvent(mapping.type, description || mapping.label));
+        events.push(makeTimelineEvent(mapping.type, description || mapping.label, operator));
       }
       return {
         ...b,
@@ -299,7 +305,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     })
   })),
 
-  incrementMissedCount: (id) => {
+  incrementMissedCount: (id, operator) => {
     const booking = get().bookings.find(b => b.id === id);
     if (!booking) return { shouldVoid: false, newMissedCount: 0 };
 
@@ -307,8 +313,8 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     set((state) => ({
       bookings: state.bookings.map(b => {
         if (b.id !== id) return b;
-        const events: TimelineEvent[] = [makeTimelineEvent('missed', `第 ${result.newMissedCount} 次过号`)];
-        if (result.shouldVoid) events.push(makeTimelineEvent('void', '连续过号，预约已作废'));
+        const events: TimelineEvent[] = [makeTimelineEvent('missed', `第 ${result.newMissedCount} 次过号`, operator)];
+        if (result.shouldVoid) events.push(makeTimelineEvent('void', '连续过号，预约已作废', operator));
         return {
           ...b,
           missedCount: result.newMissedCount,
@@ -318,6 +324,24 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       })
     }));
     return result;
+  },
+
+  markAsVoid: (id, reason, operator) => {
+    const booking = get().bookings.find(b => b.id === id);
+    if (!booking) return;
+
+    set((state) => ({
+      bookings: state.bookings.map(b => {
+        if (b.id !== id) return b;
+        return {
+          ...b,
+          missedCount: MAX_MISSED_COUNT,
+          status: 'void' as BookingStatus,
+          statusTimeline: [...(b.statusTimeline || []),
+            makeTimelineEvent('void', reason || '工作人员手动作废', operator)]
+        };
+      })
+    }));
   },
 
   addMissedRecord: (record) => set((state) => ({

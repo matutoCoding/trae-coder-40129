@@ -8,6 +8,32 @@ export type BookingStatus = 'pending' | 'confirmed' | 'queuing' | 'jumping' | 'c
 
 export type QueueStatus = 'waiting' | 'calling' | 'jumping' | 'missed' | 'completed' | 'void';
 
+export type FlowEventType =
+  | 'called'
+  | 'arrived'
+  | 'missed'
+  | 'requeued'
+  | 'jumping'
+  | 'completed'
+  | 'void'
+  | 'moved_up'
+  | 'moved_down'
+  | 'moved_tail'
+  | 'queued';
+
+export interface FlowEvent {
+  id: string;
+  platformId: string;
+  type: FlowEventType;
+  time: string;
+  bookingId?: string;
+  queueNumber?: number;
+  groupName?: string;
+  description: string;
+  operator?: string;
+  extra?: Record<string, any>;
+}
+
 export interface Platform {
   id: string;
   name: string;
@@ -56,6 +82,7 @@ export interface TimelineEvent {
   type: TimelineEventType;
   time: string;
   description?: string;
+  operator?: string;
   extra?: Record<string, any>;
 }
 

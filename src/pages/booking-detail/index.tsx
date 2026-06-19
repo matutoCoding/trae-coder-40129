@@ -203,7 +203,6 @@ const BookingDetailPage: React.FC = () => {
           updateBookingStatus(booking.id, 'queuing');
           Taro.showToast({ title: '已加入排队', icon: 'success' });
           console.log('[BookingDetail] Joined queue for booking:', booking.id);
-          setTimeout(() => Taro.switchTab({ url: '/pages/queue/index' }), 800);
         }
       }
     });
@@ -537,7 +536,12 @@ const BookingDetailPage: React.FC = () => {
                       {ev.description && (
                         <Text className={styles.timelineDesc}>{ev.description}</Text>
                       )}
-                      <Text className={styles.timelineTime}>{formatDateTime(ev.time)}</Text>
+                      <View className={styles.timelineMeta}>
+                        <Text className={styles.timelineTime}>{formatDateTime(ev.time)}</Text>
+                        {ev.operator && (
+                          <Text className={styles.timelineOperator}> · {ev.operator}</Text>
+                        )}
+                      </View>
                     </View>
                   </View>
                 );
