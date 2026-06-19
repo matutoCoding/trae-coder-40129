@@ -35,6 +35,30 @@ export interface TimeSlot {
   mergedFrom?: string;
 }
 
+export type TimelineEventType =
+  | 'created'
+  | 'health_committed'
+  | 'queued'
+  | 'calling'
+  | 'missed'
+  | 'requeued'
+  | 'void'
+  | 'jumping'
+  | 'completed'
+  | 'cancelled'
+  | 'split_from'
+  | 'split_into'
+  | 'merged_from'
+  | 'merged_into';
+
+export interface TimelineEvent {
+  id: string;
+  type: TimelineEventType;
+  time: string;
+  description?: string;
+  extra?: Record<string, any>;
+}
+
 export interface Booking {
   id: string;
   platformId: string;
@@ -53,6 +77,12 @@ export interface Booking {
   missedCount: number;
   isMerged: boolean;
   mergedBookingIds?: string[];
+  statusTimeline: TimelineEvent[];
+  originalStartTime?: string;
+  originalEndTime?: string;
+  originalTimeSlotIds?: string[];
+  splitFromBookingId?: string;
+  siblingBookingIds?: string[];
 }
 
 export interface QueueItem {

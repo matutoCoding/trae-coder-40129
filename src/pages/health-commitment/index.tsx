@@ -178,37 +178,20 @@ const HealthCommitmentPage: React.FC = () => {
             heightWeight: { height: h, weight: w }
           });
 
-          updateBooking(finalBookingId, { healthCommitted: true });
+          setSelectedPlatformId(finalPlatformId);
+          addToQueue({
+            bookingId: finalBookingId,
+            platformId: finalPlatformId,
+            groupName: booking.groupName,
+            peopleCount: booking.peopleCount
+          });
+          updateBooking(finalBookingId, { healthCommitted: true, status: 'queuing' });
+          console.log('[HealthCommitment] Signed and auto joined queue, booking:', finalBookingId, 'platform:', finalPlatformId);
 
-          Taro.showToast({ title: '签署成功', icon: 'success' });
-          console.log('[HealthCommitment] Signed for booking:', finalBookingId);
-
+          Taro.showToast({ title: '签署成功，已入队', icon: 'success' });
           setTimeout(() => {
-            Taro.showModal({
-              title: '签署成功',
-              content: `健康承诺书已签署，是否立即加入「${platform.name}」排队叫号？`,
-              confirmText: '加入排队',
-              cancelText: '稍后再说',
-              success: (queueRes) => {
-                if (queueRes.confirm) {
-                  setSelectedPlatformId(finalPlatformId);
-                  addToQueue({
-                    bookingId: finalBookingId,
-                    platformId: finalPlatformId,
-                    groupName: booking.groupName,
-                    peopleCount: booking.peopleCount
-                  });
-                  updateBooking(finalBookingId, { status: 'queuing' });
-                  console.log('[HealthCommitment] Auto joined queue, platform:', finalPlatformId);
-                  setTimeout(() => {
-                    Taro.switchTab({ url: '/pages/queue/index' });
-                  }, 500);
-                } else {
-                  Taro.navigateBack();
-                }
-              }
-            });
-          }, 800);
+            Taro.switchTab({ url: '/pages/queue/index' });
+          }, 1000);
         }
       }
     });

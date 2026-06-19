@@ -1,9 +1,17 @@
-import type { Booking, MissedRecord } from '@/types';
-import { formatDate } from '@/utils/format';
+import type { Booking, MissedRecord, TimelineEvent } from '@/types';
+import { formatDate, generateId } from '@/utils/format';
 import dayjs from 'dayjs';
 
 const today = formatDate(new Date());
 const tomorrow = formatDate(dayjs().add(1, 'day').toDate());
+
+const makeEvent = (type: TimelineEvent['type'], description: string, timeOffsetMin: number = 0, extra?: Record<string, any>): TimelineEvent => ({
+  id: generateId(),
+  type,
+  description,
+  time: dayjs().subtract(timeOffsetMin, 'minute').toISOString(),
+  extra
+});
 
 export const mockBookings: Booking[] = [
   {
@@ -22,7 +30,13 @@ export const mockBookings: Booking[] = [
     createdAt: dayjs().subtract(2, 'day').toISOString(),
     healthCommitted: true,
     missedCount: 0,
-    isMerged: true
+    isMerged: true,
+    statusTimeline: [
+      makeEvent('created', '预约创建成功', 60 * 24 * 2),
+      makeEvent('merged_from', '合并了 3 条相邻时段为连订', 60 * 24 * 2 + 5),
+      makeEvent('health_committed', '已签署健康承诺书（张三）', 60 * 12),
+      makeEvent('queued', '进入排队队列，等待叫号', 30)
+    ]
   },
   {
     id: 'BK202401002',
@@ -40,7 +54,11 @@ export const mockBookings: Booking[] = [
     createdAt: dayjs().subtract(1, 'day').toISOString(),
     healthCommitted: true,
     missedCount: 0,
-    isMerged: true
+    isMerged: true,
+    statusTimeline: [
+      makeEvent('created', '预约创建成功', 60 * 24),
+      makeEvent('health_committed', '已签署健康承诺书（李四）', 60 * 6)
+    ]
   },
   {
     id: 'BK202401003',
@@ -58,7 +76,15 @@ export const mockBookings: Booking[] = [
     createdAt: dayjs().subtract(3, 'day').toISOString(),
     healthCommitted: true,
     missedCount: 0,
-    isMerged: false
+    isMerged: false,
+    statusTimeline: [
+      makeEvent('created', '预约创建成功', 60 * 24 * 3),
+      makeEvent('health_committed', '已签署健康承诺书（王五）', 60 * 24 + 180),
+      makeEvent('queued', '进入排队队列', 240),
+      makeEvent('calling', '叫号：第 5 号', 180),
+      makeEvent('jumping', '确认到场，开始体验', 170),
+      makeEvent('completed', '体验完成，感谢参与！', 120)
+    ]
   },
   {
     id: 'BK202401004',
@@ -76,7 +102,10 @@ export const mockBookings: Booking[] = [
     createdAt: dayjs().subtract(5, 'hour').toISOString(),
     healthCommitted: false,
     missedCount: 0,
-    isMerged: true
+    isMerged: true,
+    statusTimeline: [
+      makeEvent('created', '预约创建成功', 300)
+    ]
   },
   {
     id: 'BK202401005',
@@ -94,7 +123,12 @@ export const mockBookings: Booking[] = [
     createdAt: dayjs().subtract(4, 'day').toISOString(),
     healthCommitted: false,
     missedCount: 1,
-    isMerged: true
+    isMerged: true,
+    statusTimeline: [
+      makeEvent('created', '预约创建成功', 60 * 24 * 4),
+      makeEvent('missed', '第 1 次过号（联系不上）', 180),
+      makeEvent('cancelled', '用户主动取消预约', 120)
+    ]
   },
   {
     id: 'BK202401006',
@@ -112,7 +146,10 @@ export const mockBookings: Booking[] = [
     createdAt: dayjs().subtract(2, 'hour').toISOString(),
     healthCommitted: false,
     missedCount: 0,
-    isMerged: true
+    isMerged: true,
+    statusTimeline: [
+      makeEvent('created', '预约创建成功，等待确认', 120)
+    ]
   }
 ];
 

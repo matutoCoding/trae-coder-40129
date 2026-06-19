@@ -5,6 +5,153 @@
   background: $color-bg-page-gradient;
 }
 
+.dashboard {
+  padding: $spacing-lg $page-padding 0;
+}
+
+.dashboardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.dashboardTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.clearFilter {
+  padding: 8rpx 24rpx;
+  font-size: $font-size-xs;
+  color: $color-primary;
+  background: rgba(255, 107, 53, 0.1);
+  border-radius: 32rpx;
+}
+
+.totalRow {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+  overflow-x: auto;
+  padding-bottom: $spacing-xs;
+}
+
+.totalCell {
+  flex: 1;
+  min-width: 120rpx;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-xs;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-left: 6rpx solid $color-info;
+  box-shadow: $shadow-card;
+  transition: all 0.2s ease;
+}
+
+.totalCellActive {
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(247, 147, 30, 0.1));
+  transform: translateY(-4rpx);
+  box-shadow: $shadow-card-hover;
+}
+
+.totalCellIcon {
+  font-size: 36rpx;
+  margin-bottom: 4rpx;
+}
+
+.totalCellNum {
+  font-size: 44rpx;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  line-height: 1.2;
+}
+
+.totalCellLabel {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  margin-top: 4rpx;
+}
+
+.platformStats {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+}
+
+.platformStatCard {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  box-shadow: $shadow-card;
+  transition: all 0.2s ease;
+  border: 2rpx solid transparent;
+}
+
+.platformStatCardActive {
+  border-color: $color-primary;
+  background: linear-gradient(135deg, #fff, rgba(255, 249, 245, 0.8));
+}
+
+.platformStatHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.platformStatName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.platformStatActive {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.platformStatRow {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.statCell {
+  flex: 1;
+  padding: $spacing-sm 8rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: $radius-sm;
+  background: rgba(134, 144, 156, 0.06);
+  transition: all 0.15s ease;
+}
+
+.statCellHas {
+  background: rgba(255, 107, 53, 0.05);
+}
+
+.statCellActive {
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.12), rgba(247, 147, 30, 0.12));
+  transform: scale(1.04);
+}
+
+.statCellNum {
+  font-size: 40rpx;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+}
+
+.statCellLabel {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
 .currentSection {
   padding: $spacing-xl $page-padding;
   background: $color-primary-gradient;

@@ -37,11 +37,60 @@ const MinePage: React.FC = () => {
   const myBookings = useMemo(() => {
     const groupBookings = getBookingsByGroup(currentGroupId);
     const tabConfig = tabs.find(t => t.key === activeTab);
-    if (tabConfig && tabConfig.status.length > 0) {
-      return groupBookings.filter(b => tabConfig.status.includes(b.status));
-    }
-    return groupBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const filtered = tabConfig && tabConfig.status.length > 0
+      ? groupBookings.filter(b => tabConfig.status.includes(b.status))
+      : groupBookings;
+
+    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [bookings, currentGroupId, activeTab, getBookingsByGroup]);
+
+  const groupedBookings = useMemo(() => {
+    const groups: Array<{ key: string; bookings: Booking[] }> = [];
+    const groupedIds = new Set<string>();
+
+    myBookings.forEach(b => {
+      if (groupedIds.has(b.id)) return;
+      const groupKey = b.splitFromBookingId || b.id;
+      const siblings = myBookings.filter(other => {
+        const otherKey = other.splitFromBookingId || other.id;
+        if (groupKey !== otherKey) return false;
+        if (other.id === b.id) return true;
+        if (b.siblingBookingIds?.includes(other.id)) return true;
+        if (other.siblingBookingIds?.includes(b.id)) return true;
+        if (b.splitFromBookingId && other.splitFromBookingId && b.splitFromBookingId === other.splitFromBookingId) return true;
+        return false;
+      }).sort((a, b2) => a.startTime.localeCompare(b2.startTime));
+
+      siblings.forEach(s => groupedIds.add(s.id));
+      groups.push({ key: groupKey, bookings: siblings });
+    });
+
+    return groups;
+  }, [myBookings]);
+
+  const renderedBookingList = useMemo(() => {
+    const list: Array<{
+      booking: Booking;
+      siblingCount: number;
+      isGroupFirst: boolean;
+      isGroupLast: boolean;
+    }> = [];
+    groupedBookings.forEach(group => {
+      if (group.bookings.length === 1) {
+        list.push({ booking: group.bookings[0], siblingCount: 0, isGroupFirst: false, isGroupLast: false });
+      } else {
+        group.bookings.forEach((b, idx) => {
+          list.push({
+            booking: b,
+            siblingCount: group.bookings.length - 1,
+            isGroupFirst: idx === 0,
+            isGroupLast: idx === group.bookings.length - 1
+          });
+        });
+      }
+    });
+    return list;
+  }, [groupedBookings]);
 
   const stats = useMemo(() => {
     const groupBookings = getBookingsByGroup(currentGroupId);
@@ -144,8 +193,8 @@ const MinePage: React.FC = () => {
         </View>
 
         <View className={styles.bookingList}>
-          {myBookings.length > 0 ? (
-            myBookings.map(booking => (
+          {renderedBookingList.length > 0 ? (
+            renderedBookingList.map(({ booking, siblingCount, isGroupFirst, isGroupLast }) => (
               <BookingCard
                 key={booking.id}
                 booking={booking}
@@ -155,6 +204,9 @@ const MinePage: React.FC = () => {
                 onCancel={() => handleCancel(booking.id)}
                 onQueue={() => handleQueue(booking.id)}
                 queuePosition={getQueuePosition(booking.id)}
+                siblingCount={siblingCount}
+                isGroupFirst={isGroupFirst}
+                isGroupLast={isGroupLast}
               />
             ))
           ) : (

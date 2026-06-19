@@ -15,6 +15,9 @@ interface BookingCardProps {
   onCancel?: () => void;
   onQueue?: () => void;
   queuePosition?: number;
+  siblingCount?: number;
+  isGroupFirst?: boolean;
+  isGroupLast?: boolean;
 }
 
 const BookingCard: React.FC<BookingCardProps> = ({
@@ -24,17 +27,38 @@ const BookingCard: React.FC<BookingCardProps> = ({
   showActions,
   onCancel,
   onQueue,
-  queuePosition
+  queuePosition,
+  siblingCount = 0,
+  isGroupFirst = false,
+  isGroupLast = false
 }) => {
   const statusInfo = bookingStatusMap[booking.status];
   const canQueue = booking.status === 'confirmed' && booking.healthCommitted;
   const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
+  const isSplitChild = !!booking.originalStartTime;
+  const hasRelation = isSplitChild || siblingCount > 0;
 
   return (
     <View
-      className={classnames(styles.card, booking.status === 'cancelled' && styles.cancelled)}
+      className={classnames(
+        styles.card,
+        booking.status === 'cancelled' && styles.cancelled,
+        hasRelation && styles.related,
+        isGroupFirst && styles.relatedFirst,
+        isGroupLast && styles.relatedLast,
+        !isGroupFirst && !isGroupLast && siblingCount > 0 && styles.relatedMiddle
+      )}
       onClick={onClick}
     >
+      {hasRelation && isGroupFirst && (
+        <View className={styles.relationHeader}>
+          <Text className={styles.relationHeaderIcon}>🔗</Text>
+          <Text className={styles.relationHeaderText}>
+            同一条连订拆分后的 {siblingCount + 1} 个时段段
+          </Text>
+        </View>
+      )}
+
       <View className={styles.header}>
         <View className={styles.platformRow}>
           <Text className={styles.platformName}>
@@ -63,6 +87,16 @@ const BookingCard: React.FC<BookingCardProps> = ({
         <Text className={styles.peopleCount}>{booking.peopleCount}人</Text>
       </View>
 
+      {isSplitChild && booking.originalStartTime && (
+        <View className={styles.splitRow}>
+          <Text className={styles.splitIcon}>✂️</Text>
+          <Text className={styles.splitText}>
+            原始连订 {formatTimeRange(booking.originalStartTime, booking.originalEndTime || booking.startTime)}
+            {booking.originalTimeSlotIds && `（共 ${booking.originalTimeSlotIds.length} 时段）`}
+          </Text>
+        </View>
+      )}
+
       <View className={styles.timeRow}>
         <View className={styles.timeItem}>
           <Text className={styles.timeIcon}>📅</Text>
@@ -72,6 +106,9 @@ const BookingCard: React.FC<BookingCardProps> = ({
           <Text className={styles.timeIcon}>⏱️</Text>
           <Text className={styles.timeText}>
             {formatTimeRange(booking.startTime, booking.endTime)}
+            <Text style={{ color: '#86909C', marginLeft: 8, fontSize: 22 }}>
+              ({booking.timeSlotIds.length}时段)
+            </Text>
           </Text>
         </View>
       </View>

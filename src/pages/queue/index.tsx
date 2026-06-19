@@ -9,9 +9,17 @@ import { useUserStore } from '@/store/useUserStore';
 import QueueCard from '@/components/QueueCard';
 import StatusBadge from '@/components/StatusBadge';
 import { formatTime, generateId } from '@/utils/format';
-import type { QueueItem } from '@/types';
+import type { QueueItem, QueueStatus } from '@/types';
 import { MAX_MISSED_COUNT } from '@/utils/booking';
 import styles from './index.module.scss';
+
+const DASHBOARD_STATUS: Array<{ key: QueueStatus | 'all'; label: string; icon: string; color: string }> = [
+  { key: 'waiting', label: '等待中', icon: '⏳', color: '#00B4D8' },
+  { key: 'calling', label: '叫号中', icon: '📢', color: '#FF6B35' },
+  { key: 'jumping', label: '体验中', icon: '🎢', color: '#F7931E' },
+  { key: 'missed', label: '过号', icon: '⚠️', color: '#F53F3F' },
+  { key: 'completed', label: '完成', icon: '✅', color: '#00B42A' }
+];
 
 const QueuePage: React.FC = () => {
   const { platforms, selectedPlatformId, setSelectedPlatformId } = usePlatformStore();
@@ -20,6 +28,7 @@ const QueuePage: React.FC = () => {
   const { currentGroupId, userName } = useUserStore();
 
   const [adminMode, setAdminMode] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<QueueStatus | 'all' | null>(null);
 
   useDidShow(() => {
     console.log('[Queue] Page did show, queue length:', queue.length);
@@ -42,8 +51,46 @@ const QueuePage: React.FC = () => {
       .sort((a, b) => a.position - b.position);
   }, [currentPlatform, getQueueByPlatform, queue]);
 
+  const dashboardStats = useMemo(() => {
+    return platforms
+      .filter(p => p.status === 'open')
+      .map(p => {
+        const items = queue.filter(q => q.platformId === p.id);
+        const waiting = items.filter(q => q.status === 'waiting').length;
+        const calling = items.filter(q => q.status === 'calling').length;
+        const jumping = items.filter(q => q.status === 'jumping').length;
+        const missed = items.filter(q => q.status === 'missed').length;
+        const completed = items.filter(q => q.status === 'completed').length;
+        return {
+          platformId: p.id,
+          platformName: p.name,
+          waiting, calling, jumping, missed, completed,
+          active: waiting + calling + jumping + missed,
+          total: waiting + calling + jumping + missed + completed
+        };
+      });
+  }, [platforms, queue]);
+
+  const totalStats = useMemo(() => {
+    const agg = dashboardStats.reduce((acc, s) => ({
+      waiting: acc.waiting + s.waiting,
+      calling: acc.calling + s.calling,
+      jumping: acc.jumping + s.jumping,
+      missed: acc.missed + s.missed,
+      completed: acc.completed + s.completed,
+      active: acc.active + s.active,
+      total: acc.total + s.total
+    }), { waiting: 0, calling: 0, jumping: 0, missed: 0, completed: 0, active: 0, total: 0 });
+    return agg;
+  }, [dashboardStats]);
+
   const waitingList = useMemo(
     () => platformQueue.filter(q => q.status === 'waiting'),
+    [platformQueue]
+  );
+
+  const callingList = useMemo(
+    () => platformQueue.filter(q => q.status === 'calling'),
     [platformQueue]
   );
 
@@ -52,11 +99,36 @@ const QueuePage: React.FC = () => {
     [platformQueue]
   );
 
+  const missedList = useMemo(
+    () => platformQueue.filter(q => q.status === 'missed'),
+    [platformQueue]
+  );
+
+  const completedList = useMemo(() => {
+    if (!currentPlatform) return [];
+    return getQueueByPlatform(currentPlatform.id)
+      .filter(q => q.status === 'completed')
+      .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime())
+      .slice(0, 10);
+  }, [currentPlatform, getQueueByPlatform, queue]);
+
   const stats = useMemo(() => {
     const active = platformQueue.filter(q => q.status !== 'completed' && q.status !== 'void').length;
     const done = queue.filter(q => q.platformId === currentPlatform?.id && q.status === 'completed').length;
     return { active, waiting: waitingList.length, done };
   }, [platformQueue, queue, waitingList, currentPlatform]);
+
+  const filterLabel = useMemo(() => {
+    const match = DASHBOARD_STATUS.find(s => s.key === statusFilter);
+    return match?.label || '';
+  }, [statusFilter]);
+
+  const handleStatusFilter = (filter: QueueStatus | 'all' | null, platformId?: string) => {
+    if (platformId && platformId !== currentPlatform?.id) {
+      setSelectedPlatformId(platformId);
+    }
+    setStatusFilter(prev => (prev === filter ? null : filter));
+  };
 
   const handleConfirmArrival = (queueId: string) => {
     const item = queue.find(q => q.id === queueId);
@@ -232,6 +304,80 @@ const QueuePage: React.FC = () => {
 
   return (
     <ScrollView scrollY className={styles.page} enhanced>
+      <View className={styles.dashboard}>
+        <View className={styles.dashboardHeader}>
+          <Text className={styles.dashboardTitle}>📊 今日运营看板</Text>
+          {statusFilter && (
+            <View
+              className={styles.clearFilter}
+              onClick={() => setStatusFilter(null)}
+            >
+              <Text>清除筛选「{filterLabel}」</Text>
+            </View>
+          )}
+        </View>
+
+        <View className={styles.totalRow}>
+          {DASHBOARD_STATUS.map(st => (
+            <View
+              key={st.key}
+              className={classnames(
+                styles.totalCell,
+                statusFilter === st.key && styles.totalCellActive
+              )}
+              onClick={() => handleStatusFilter(st.key)}
+              style={{ borderLeftColor: st.color }}
+            >
+              <Text className={styles.totalCellIcon}>{st.icon}</Text>
+              <Text className={styles.totalCellNum}>{totalStats[st.key as keyof typeof totalStats] || 0}</Text>
+              <Text className={styles.totalCellLabel}>{st.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View className={styles.platformStats}>
+          {dashboardStats.map(ps => (
+            <View
+              key={ps.platformId}
+              className={classnames(
+                styles.platformStatCard,
+                currentPlatform?.id === ps.platformId && styles.platformStatCardActive
+              )}
+              onClick={() => setSelectedPlatformId(ps.platformId)}
+            >
+              <View className={styles.platformStatHeader}>
+                <Text className={styles.platformStatName}>{ps.platformName}</Text>
+                <Text className={styles.platformStatActive}>
+                  活动 {ps.active} / 全天 {ps.total}
+                </Text>
+              </View>
+              <View className={styles.platformStatRow}>
+                {DASHBOARD_STATUS.map(st => {
+                  const count = ps[st.key as keyof typeof ps] as number;
+                  return (
+                    <View
+                      key={st.key}
+                      className={classnames(
+                        styles.statCell,
+                        count > 0 && styles.statCellHas,
+                        statusFilter === st.key && currentPlatform?.id === ps.platformId && styles.statCellActive
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (count > 0) handleStatusFilter(st.key, ps.platformId);
+                      }}
+                    >
+                      <Text className={styles.statCellNum} style={{ color: st.color }}>{count}</Text>
+                      <Text className={styles.statCellLabel}>{st.label}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+
       <View className={styles.currentSection}>
         <View className={classnames(styles.currentLabel, adminMode && {})}>
           当前叫号 · {currentPlatform?.name || '未选择'}
@@ -357,7 +503,24 @@ const QueuePage: React.FC = () => {
           </Text>
         </View>
 
-        {jumpingList.length > 0 && (
+        {callingList.length > 0 && (!statusFilter || statusFilter === 'calling') && (
+          <>
+            <Text className={styles.sectionSub}>📢 叫号中（{callingList.length}人）</Text>
+            <View className={styles.queueList}>
+              {callingList.map((q: QueueItem) => (
+                <QueueCard
+                  key={q.id}
+                  queue={q}
+                  showActions={adminMode}
+                  onConfirmArrival={() => handleConfirmArrival(q.id)}
+                  onMarkMissed={() => handleMarkMissed(q.id)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+
+        {jumpingList.length > 0 && (!statusFilter || statusFilter === 'jumping') && (
           <>
             <Text className={styles.sectionSub}>🎢 正在体验</Text>
             <View className={styles.queueList}>
@@ -373,7 +536,24 @@ const QueuePage: React.FC = () => {
           </>
         )}
 
-        {waitingList.length > 0 && (
+        {missedList.length > 0 && (!statusFilter || statusFilter === 'missed') && (
+          <>
+            <Text className={styles.sectionSub}>⚠️ 过号重排队（{missedList.length}人）</Text>
+            <View className={styles.queueList}>
+              {missedList.map((q: QueueItem) => (
+                <QueueCard
+                  key={q.id}
+                  queue={q}
+                  showActions={adminMode}
+                  onConfirmArrival={() => handleConfirmArrival(q.id)}
+                  onMarkMissed={() => handleMarkMissed(q.id)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+
+        {waitingList.length > 0 && (!statusFilter || statusFilter === 'waiting') && (
           <>
             <Text className={styles.sectionSub}>⏳ 等待中（{waitingList.length}人）</Text>
             <View className={styles.queueList}>
@@ -391,13 +571,37 @@ const QueuePage: React.FC = () => {
           </>
         )}
 
-        {platformQueue.length === 0 && (
+        {platformQueue.length === 0 && !statusFilter && (
           <View className={styles.emptyState}>
             <Text className={styles.emptyIcon}>🎯</Text>
             <Text className={styles.emptyText}>
               {currentPlatform?.name}暂无排队队伍\n点击"取号排队"开始预约体验
             </Text>
           </View>
+        )}
+
+        {statusFilter && platformQueue.length === 0 && (
+          <View className={styles.emptyState}>
+            <Text className={styles.emptyIcon}>🔍</Text>
+            <Text className={styles.emptyText}>
+              当前「{filterLabel}」状态下暂无记录
+            </Text>
+          </View>
+        )}
+
+        {completedList.length > 0 && (!statusFilter || statusFilter === 'completed') && (
+          <>
+            <Text className={styles.sectionSub}>✅ 已完成（今日 {completedList.length} 单）</Text>
+            <View className={styles.queueList}>
+              {completedList.map((q: QueueItem) => (
+                <QueueCard
+                  key={q.id}
+                  queue={q}
+                  showActions={false}
+                />
+              ))}
+            </View>
+          </>
         )}
 
         {currentPlatformMissedRecords.length > 0 && (

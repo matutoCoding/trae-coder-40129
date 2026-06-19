@@ -429,3 +429,163 @@
   border-radius: 40rpx;
   font-size: 28rpx;
 }
+
+.originalRange {
+  display: flex;
+  align-items: flex-start;
+  padding: 24rpx;
+  background: linear-gradient(135deg, #FFF7E8 0%, #FFFDF5 100%);
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+  border: 2rpx solid rgba(255, 125, 0, 0.2);
+}
+
+.originalRangeIcon {
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 50%;
+  background: rgba(255, 125, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.originalRangeContent {
+  flex: 1;
+}
+
+.originalRangeLabel {
+  display: block;
+  font-size: 24rpx;
+  color: #FF7D00;
+  font-weight: 500;
+  margin-bottom: 8rpx;
+}
+
+.originalRangeValue {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1D2129;
+  margin-bottom: 6rpx;
+}
+
+.originalRangeSub {
+  display: block;
+  font-size: 24rpx;
+  color: #4E5969;
+}
+
+.siblingLabel {
+  display: block;
+  font-size: 26rpx;
+  color: #4E5969;
+  margin-bottom: 16rpx;
+  margin-top: 8rpx;
+}
+
+.siblingList {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.siblingItem {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background: #F7F8FA;
+  border-radius: 16rpx;
+  border: 2rpx solid #E5E6EB;
+  transition: all 0.2s ease;
+}
+
+.siblingTime {
+  flex: 1;
+  font-size: 26rpx;
+  color: #1D2129;
+}
+
+.siblingMeta {
+  display: flex;
+  align-items: center;
+  margin-right: 12rpx;
+}
+
+.siblingArrow {
+  font-size: 40rpx;
+  color: #C9CDD4;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.timelineList {
+  position: relative;
+  padding-left: 8rpx;
+}
+
+.timelineItem {
+  display: flex;
+  gap: 20rpx;
+  position: relative;
+}
+
+.timelineLeft {
+  width: 56rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.timelineDot {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFF7E8 0%, #FFF0E8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3rpx solid #FF6B35;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.timelineLine {
+  flex: 1;
+  width: 4rpx;
+  background: linear-gradient(to bottom, #FF6B35, rgba(255, 107, 53, 0.2));
+  margin: 8rpx 0;
+  min-height: 40rpx;
+}
+
+.timelineContent {
+  flex: 1;
+  padding-bottom: 32rpx;
+}
+
+.timelineTitle {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1D2129;
+  margin-bottom: 6rpx;
+  line-height: 1.4;
+}
+
+.timelineDesc {
+  display: block;
+  font-size: 24rpx;
+  color: #4E5969;
+  margin-bottom: 8rpx;
+  line-height: 1.5;
+}
+
+.timelineTime {
+  display: block;
+  font-size: 22rpx;
+  color: #86909C;
+}

@@ -7,16 +7,50 @@ import { usePlatformStore } from '@/store/usePlatformStore';
 import { useQueueStore } from '@/store/useQueueStore';
 import { useUserStore } from '@/store/useUserStore';
 import StatusBadge from '@/components/StatusBadge';
-import { bookingStatusMap, difficultyMap } from '@/types';
+import { bookingStatusMap, difficultyMap, TimelineEvent, TimelineEventType } from '@/types';
 import { getTimeSlots, formatDateTime, formatTimeRange, getRelativeTime } from '@/utils/format';
 import { MAX_MISSED_COUNT } from '@/utils/booking';
 import styles from './index.module.scss';
+
+const TIMELINE_ICON: Record<TimelineEventType, string> = {
+  created: '📝',
+  health_committed: '❤️',
+  queued: '🎫',
+  calling: '📢',
+  missed: '⚠️',
+  requeued: '🔁',
+  void: '🚫',
+  jumping: '🎢',
+  completed: '✅',
+  cancelled: '❌',
+  split_from: '✂️',
+  split_into: '🧩',
+  merged_from: '🔗',
+  merged_into: '🔗'
+};
+
+const TIMELINE_LABEL: Record<TimelineEventType, string> = {
+  created: '预约创建',
+  health_committed: '签健康承诺',
+  queued: '进入排队',
+  calling: '叫号中',
+  missed: '过号',
+  requeued: '重排队尾',
+  void: '预约作废',
+  jumping: '开始体验',
+  completed: '体验完成',
+  cancelled: '已取消',
+  split_from: '拆分生成',
+  split_into: '拆分退订',
+  merged_from: '合并连订',
+  merged_into: '合并进其他预约'
+};
 
 const BookingDetailPage: React.FC = () => {
   const router = useRouter();
   const bookingId = router.params.id as string;
 
-  const { getBookingById, cancelBooking, missedRecords } = useBookingStore();
+  const { getBookingById, cancelBooking, missedRecords, getBookingsByGroup } = useBookingStore();
   const { getPlatformById } = usePlatformStore();
   const { getQueuePosition, addToQueue } = useQueueStore();
   const { getHealthCommitment, userName } = useUserStore();
@@ -32,6 +66,31 @@ const BookingDetailPage: React.FC = () => {
     () => missedRecords.filter(m => m.bookingId === bookingId),
     [missedRecords, bookingId]
   );
+
+  const siblingBookings = useMemo(() => {
+    if (!booking) return [];
+    const allSameGroup = getBookingsByGroup(booking.groupId);
+    return allSameGroup.filter(b => {
+      if (b.id === booking.id) return false;
+      if (b.status === 'cancelled' || b.status === 'void') return false;
+      if (b.date !== booking.date) return false;
+      if (b.platformId !== booking.platformId) return false;
+      const isSibling =
+        (booking.splitFromBookingId && b.splitFromBookingId === booking.splitFromBookingId) ||
+        (booking.siblingBookingIds && booking.siblingBookingIds.includes(b.id)) ||
+        (b.siblingBookingIds && b.siblingBookingIds.includes(booking.id));
+      return isSibling;
+    }).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }, [booking, getBookingsByGroup]);
+
+  const sortedTimeline = useMemo(() => {
+    if (!booking?.statusTimeline) return [];
+    return [...booking.statusTimeline].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+  }, [booking]);
+
+  const handleGoSibling = (siblingId: string) => {
+    Taro.redirectTo({ url: `/pages/booking-detail/index?id=${siblingId}` });
+  };
 
   const slotDetails = useMemo(() => {
     if (!booking || !platform) return [];
@@ -389,6 +448,102 @@ const BookingDetailPage: React.FC = () => {
             ))}
           </View>
         )}
+
+        {(booking.originalStartTime || siblingBookings.length > 0) && (
+          <View className={styles.card}>
+            <View className={styles.cardHeader}>
+              <Text className={styles.cardTitle}>🧩 合并连订关系</Text>
+              {siblingBookings.length > 0 && (
+                <StatusBadge text={`关联 ${siblingBookings.length} 条`} type="warning" size="sm" />
+              )}
+            </View>
+
+            {booking.originalStartTime && (
+              <View className={styles.originalRange}>
+                <View className={styles.originalRangeIcon}>
+                  <Text>📅</Text>
+                </View>
+                <View className={styles.originalRangeContent}>
+                  <Text className={styles.originalRangeLabel}>原始连订时段</Text>
+                  <Text className={styles.originalRangeValue}>
+                    {formatTimeRange(booking.originalStartTime, booking.originalEndTime || booking.startTime)}
+                    {booking.originalTimeSlotIds && `（共 ${booking.originalTimeSlotIds.length} 个时段）`}
+                  </Text>
+                  <Text className={styles.originalRangeSub}>
+                    当前剩余：{formatTimeRange(booking.startTime, booking.endTime)}
+                    （{slotDetails.length} 个时段）
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {siblingBookings.length > 0 && (
+              <>
+                <Text className={styles.siblingLabel}>同连订剩余时段：</Text>
+                <View className={styles.siblingList}>
+                  {siblingBookings.map(sib => (
+                    <View
+                      key={sib.id}
+                      className={styles.siblingItem}
+                      onClick={() => handleGoSibling(sib.id)}
+                    >
+                      <View className={styles.siblingTime}>
+                        <Text style={{ fontWeight: 600 }}>{formatTimeRange(sib.startTime, sib.endTime)}</Text>
+                      </View>
+                      <View className={styles.siblingMeta}>
+                        <Text style={{ fontSize: 22, color: bookingStatusMap[sib.status].color }}>
+                          {bookingStatusMap[sib.status].label}
+                        </Text>
+                        <Text style={{ fontSize: 22, color: '#86909C', marginLeft: 8 }}>
+                          {sib.timeSlotIds.length} 时段
+                        </Text>
+                      </View>
+                      <Text className={styles.siblingArrow}>›</Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+          </View>
+        )}
+
+        <View className={styles.card}>
+          <View className={styles.cardHeader}>
+            <Text className={styles.cardTitle}>📜 状态时间线</Text>
+            <StatusBadge text={`${sortedTimeline.length} 条记录`} type="info" size="sm" />
+          </View>
+
+          {sortedTimeline.length === 0 ? (
+            <View style={{ padding: '48rpx 0', textAlign: 'center' }}>
+              <Text style={{ fontSize: 60, display: 'block', marginBottom: 16 }}>📋</Text>
+              <Text style={{ fontSize: 26, color: '#86909C' }}>暂无状态变更记录</Text>
+            </View>
+          ) : (
+            <View className={styles.timelineList}>
+              {sortedTimeline.map((ev: TimelineEvent, idx: number) => {
+                const isLast = idx === sortedTimeline.length - 1;
+                const label = TIMELINE_LABEL[ev.type] || ev.type;
+                return (
+                  <View key={ev.id} className={styles.timelineItem}>
+                    <View className={styles.timelineLeft}>
+                      <View className={styles.timelineDot}>
+                        <Text style={{ fontSize: 24 }}>{TIMELINE_ICON[ev.type] || '📍'}</Text>
+                      </View>
+                      {!isLast && <View className={styles.timelineLine} />}
+                    </View>
+                    <View className={styles.timelineContent}>
+                      <Text className={styles.timelineTitle}>{label}</Text>
+                      {ev.description && (
+                        <Text className={styles.timelineDesc}>{ev.description}</Text>
+                      )}
+                      <Text className={styles.timelineTime}>{formatDateTime(ev.time)}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
       </View>
 
       <View className={styles.bottomBar}>
