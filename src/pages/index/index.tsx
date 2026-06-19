@@ -23,7 +23,7 @@ interface BookingFormData {
 
 const IndexPage: React.FC = () => {
   const { platforms, selectedPlatformId, setSelectedPlatformId } = usePlatformStore();
-  const { bookings, getBookingsByPlatform, addBooking, updateBooking } = useBookingStore();
+  const { bookings, getBookingsByPlatform, addOrMergeBooking, updateBooking } = useBookingStore();
   const { userName, userPhone, currentGroupId } = useUserStore();
 
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
@@ -126,23 +126,14 @@ const IndexPage: React.FC = () => {
       isMerged: hasAdjacent || selectedSlotIds.length > 1
     };
 
-    addBooking(newBooking);
+    const finalBooking = addOrMergeBooking(newBooking);
 
-    if (newBooking.isMerged) {
-      const mockSlots: TimeSlot[] = selectedSlotsDetail.map(s => ({
-        id: s.id,
-        platformId: selectedPlatform.id,
-        date: selectedDate,
-        startTime: s.startTime,
-        endTime: s.endTime,
-        status: 'available'
-      }));
-      mergeAdjacentSlots(mockSlots, newBooking.groupId, newBooking.id);
-    }
+    console.log('[Index] Created/merged booking:', finalBooking.id, 'merged:', finalBooking.isMerged, 'slots:', finalBooking.timeSlotIds.length);
 
-    console.log('[Index] Created booking:', newBooking.id, 'merged:', newBooking.isMerged);
-
-    Taro.showToast({ title: '预约成功', icon: 'success' });
+    Taro.showToast({
+      title: finalBooking.id !== newBooking.id ? '已合并为连订' : '预约成功',
+      icon: 'success'
+    });
     setShowBookingModal(false);
     setSelectedSlotIds([]);
     setFormData({

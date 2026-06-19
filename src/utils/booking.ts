@@ -119,10 +119,14 @@ export const splitMergedBooking = (
   groups.push([...currentGroup]);
 
   if (groups.length === 1) {
+    const firstId = remainingSlotIds[0];
+    const lastId = remainingSlotIds[remainingSlotIds.length - 1];
     const updatedBooking: Booking = {
       ...booking,
       timeSlotIds: remainingSlotIds,
-      isMerged: remainingSlotIds.length > 1
+      isMerged: remainingSlotIds.length > 1,
+      startTime: getSlotStartTime(firstId, booking),
+      endTime: getSlotEndTime(lastId, booking)
     };
     return { updatedBooking, newBookings, updatedSlots };
   }

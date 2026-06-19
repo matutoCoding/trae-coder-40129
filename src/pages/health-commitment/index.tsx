@@ -8,7 +8,7 @@ import { useQueueStore } from '@/store/useQueueStore';
 import { useUserStore } from '@/store/useUserStore';
 import StatusBadge from '@/components/StatusBadge';
 import { formatTimeRange, formatDateTime } from '@/utils/format';
-import type { HealthCommitment as HealthCommitmentType } from '@/types';
+import type { Booking, HealthCommitment as HealthCommitmentType } from '@/types';
 import styles from './index.module.scss';
 
 type AgreedKey = keyof HealthCommitmentType['agreed'];
@@ -55,10 +55,23 @@ const HealthCommitmentPage: React.FC = () => {
   const bookingId = router.params.bookingId as string;
   const platformId = router.params.platformId as string;
 
-  const { getBookingById, updateBooking } = useBookingStore();
-  const { getPlatformById } = usePlatformStore();
-  const { addToQueue } = useQueueStore();
-  const { signHealthCommitment, getHealthCommitment, userName } = useUserStore();
+  const { getBookingById, updateBooking, getBookingsByGroup } = useBookingStore();
+  const { getPlatformById, platforms, setSelectedPlatformId } = usePlatformStore();
+  const { addToQueue, queue } = useQueueStore();
+  const { signHealthCommitment, getHealthCommitment, userName, currentGroupId } = useUserStore();
+
+  const [selectedBookingId, setSelectedBookingId] = useState<string>(bookingId || '');
+
+  const availableBookings: Booking[] = useMemo(() => {
+    const groupBookings = getBookingsByGroup(currentGroupId);
+    return groupBookings.filter(b => {
+      if (platformId && b.platformId !== platformId) return false;
+      if (['completed', 'cancelled', 'void'].includes(b.status)) return false;
+      if (b.healthCommitted) return false;
+      const alreadyInQueue = queue.some(q => q.bookingId === b.id && q.status !== 'completed' && q.status !== 'void');
+      return !alreadyInQueue;
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [currentGroupId, getBookingsByGroup, platformId, queue]);
 
   const [agreed, setAgreed] = useState<HealthCommitmentType['agreed']>({
     heartDisease: false,
@@ -74,11 +87,16 @@ const HealthCommitmentPage: React.FC = () => {
   const [finalAgreed, setFinalAgreed] = useState<boolean>(false);
   const [focusField, setFocusField] = useState<string | null>(null);
 
-  const booking = useMemo(() => getBookingById(bookingId), [bookingId, getBookingById]);
-  const platform = useMemo(() => getPlatformById(platformId), [platformId, getPlatformById]);
+  const effectiveBookingId = selectedBookingId || bookingId;
+
+  const booking = useMemo(() => effectiveBookingId ? getBookingById(effectiveBookingId) : undefined, [effectiveBookingId, getBookingById]);
+  const platform = useMemo(
+    () => (booking ? getPlatformById(booking.platformId) : (platformId ? getPlatformById(platformId) : undefined)),
+    [booking, platformId, getPlatformById]
+  );
   const existingCommitment = useMemo(
-    () => bookingId ? getHealthCommitment(bookingId) : undefined,
-    [bookingId, getHealthCommitment]
+    () => effectiveBookingId ? getHealthCommitment(effectiveBookingId) : undefined,
+    [effectiveBookingId, getHealthCommitment]
   );
 
   useDidShow(() => {
@@ -145,38 +163,43 @@ const HealthCommitmentPage: React.FC = () => {
       return;
     }
 
+    const finalBookingId = booking.id;
+    const finalPlatformId = booking.platformId;
+
     Taro.showModal({
       title: '确认签署健康承诺书',
       content: '我确认以上填写信息真实有效，如有虚假愿意承担一切后果。确定提交吗？',
       success: (res) => {
         if (res.confirm) {
-          signHealthCommitment(booking.id, {
+          signHealthCommitment(finalBookingId, {
             signedAt: new Date().toISOString(),
             signerName: signerName.trim(),
             agreed: { ...agreed },
             heightWeight: { height: h, weight: w }
           });
 
-          updateBooking(booking.id, { healthCommitted: true });
+          updateBooking(finalBookingId, { healthCommitted: true });
 
           Taro.showToast({ title: '签署成功', icon: 'success' });
-          console.log('[HealthCommitment] Signed for booking:', booking.id);
+          console.log('[HealthCommitment] Signed for booking:', finalBookingId);
 
           setTimeout(() => {
             Taro.showModal({
               title: '签署成功',
-              content: '健康承诺书已签署，是否立即加入排队叫号？',
+              content: `健康承诺书已签署，是否立即加入「${platform.name}」排队叫号？`,
               confirmText: '加入排队',
               cancelText: '稍后再说',
               success: (queueRes) => {
                 if (queueRes.confirm) {
+                  setSelectedPlatformId(finalPlatformId);
                   addToQueue({
-                    bookingId: booking.id,
-                    platformId: booking.platformId,
+                    bookingId: finalBookingId,
+                    platformId: finalPlatformId,
                     groupName: booking.groupName,
                     peopleCount: booking.peopleCount
                   });
-                  console.log('[HealthCommitment] Auto joined queue:', booking.id);
+                  updateBooking(finalBookingId, { status: 'queuing' });
+                  console.log('[HealthCommitment] Auto joined queue, platform:', finalPlatformId);
                   setTimeout(() => {
                     Taro.switchTab({ url: '/pages/queue/index' });
                   }, 500);
@@ -195,30 +218,77 @@ const HealthCommitmentPage: React.FC = () => {
     Taro.navigateBack();
   };
 
-  if (!booking || !platform) {
+  if (!booking) {
     return (
       <ScrollView scrollY className={styles.page}>
-        <View className={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '120rpx 0'
-        }}>
-          <Text style={{ fontSize: 120, marginBottom: 32 }}>🔍</Text>
-          <Text style={{ fontSize: 30, color: '#86909C', marginBottom: 32 }}>预约信息不存在</Text>
+        <View className={styles.header}>
+          <Text className={styles.headerTitle}>❤️ 健康承诺书</Text>
+          <Text className={styles.headerDesc}>
+            请先选择需要签署健康承诺书的预约
+          </Text>
+        </View>
+        <View className={styles.content}>
+          <View className={styles.card}>
+            <View className={styles.cardHeader}>
+              <Text className={styles.cardTitle}>📋 选择预约</Text>
+            </View>
+            {availableBookings.length === 0 ? (
+              <View style={{ padding: '60rpx 0', textAlign: 'center' }}>
+                <Text style={{ fontSize: 80, display: 'block', marginBottom: 24 }}>�</Text>
+                <Text style={{ fontSize: 28, color: '#86909C', display: 'block', marginBottom: 24 }}>
+                  暂无可签署健康承诺的预约
+                </Text>
+                <View
+                  style={{
+                    display: 'inline-block',
+                    padding: '16rpx 40rpx',
+                    background: 'linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)',
+                    color: '#fff',
+                    borderRadius: 32,
+                    fontSize: 26
+                  }}
+                  onClick={() => Taro.switchTab({ url: '/pages/index/index' })}
+                >
+                  <Text>去预约</Text>
+                </View>
+              </View>
+            ) : (
+              availableBookings.map(b => {
+                const p = getPlatformById(b.platformId);
+                return (
+                  <View
+                    key={b.id}
+                    className={classnames(styles.checkItem, selectedBookingId === b.id && styles.checkItemChecked)}
+                    onClick={() => setSelectedBookingId(b.id)}
+                    style={{ marginBottom: 16 }}
+                  >
+                    <View className={classnames(styles.checkBox, selectedBookingId === b.id && styles.checkBoxChecked)}>
+                      {selectedBookingId === b.id && <Text className={styles.checkIcon}>✓</Text>}
+                    </View>
+                    <View className={styles.checkContent}>
+                      <Text className={styles.checkTitle}>
+                        {b.groupName} · {p?.name || '跳台'}
+                      </Text>
+                      <Text className={styles.checkDesc}>
+                        {b.date} {formatTimeRange(b.startTime, b.endTime)} · {b.peopleCount}人
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </View>
+
+        <View className={styles.bottomBar}>
+          <View className={classnames(styles.btn, styles.btnSecondary)} onClick={() => Taro.navigateBack()}>
+            <Text>取消</Text>
+          </View>
           <View
-            style={{
-              padding: '20rpx 48rpx',
-              background: 'linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)',
-              color: '#fff',
-              borderRadius: 40,
-              fontSize: 28
-            }}
-            onClick={() => Taro.navigateBack()}
+            className={classnames(styles.btn, styles.btnFull, styles.btnPrimary, !selectedBookingId && styles.btnDisabled)}
+            onClick={() => { if (selectedBookingId) Taro.showToast({ title: '请填写健康信息', icon: 'none' }); }}
           >
-            <Text>返回</Text>
+            <Text>下一步</Text>
           </View>
         </View>
       </ScrollView>

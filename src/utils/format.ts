@@ -56,7 +56,7 @@ export const getTimeSlots = (
 };
 
 export const isAdjacentSlots = (slot1End: string, slot2Start: string): boolean => {
-  return dayjs(`2024-01-01 ${slot1End}`).isSame(dayjs(`2024-01-01 ${slot2Start}`), 'minute';
+  return dayjs(`2024-01-01 ${slot1End}`).isSame(dayjs(`2024-01-01 ${slot2Start}`), 'minute');
 };
 
 export const generateId = (): string => {

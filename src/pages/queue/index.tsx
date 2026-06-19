@@ -15,8 +15,8 @@ import styles from './index.module.scss';
 
 const QueuePage: React.FC = () => {
   const { platforms, selectedPlatformId, setSelectedPlatformId } = usePlatformStore();
-  const { queue, getQueueByPlatform, getCurrentCalling, callNext, confirmArrival, markAsMissed, markAsCompleted, addToQueue, addMissedRecord } = useQueueStore();
-  const { missedRecords, getBookingById, updateBookingStatus, incrementMissedCount } = useBookingStore();
+  const { queue, getQueueByPlatform, getCurrentCalling, callNext, confirmArrival, markAsMissed, markAsCompleted, addToQueue } = useQueueStore();
+  const { missedRecords, getBookingById, updateBookingStatus, incrementMissedCount, addMissedRecord, getBookingsByGroup } = useBookingStore();
   const { currentGroupId, userName } = useUserStore();
 
   const [adminMode, setAdminMode] = useState(true);
@@ -67,6 +67,14 @@ const QueuePage: React.FC = () => {
     console.log('[Queue] Confirmed arrival:', queueId);
   };
 
+  const currentPlatformMissedRecords = useMemo(
+    () => missedRecords
+      .filter(m => !currentPlatform || m.platformId === currentPlatform.id)
+      .sort((a, b) => new Date(b.missedAt).getTime() - new Date(a.missedAt).getTime())
+      .slice(0, 10),
+    [missedRecords, currentPlatform]
+  );
+
   const handleMarkMissed = (queueId: string) => {
     const item = queue.find(q => q.id === queueId);
     if (!item || !currentPlatform) return;
@@ -74,6 +82,7 @@ const QueuePage: React.FC = () => {
     Taro.showModal({
       title: '确认过号',
       content: `确定将${item.groupName}（第${item.queueNumber}号）标记为过号吗？\n过号${MAX_MISSED_COUNT}次将自动作废预约`,
+      confirmColor: '#F53F3F',
       success: (res) => {
         if (res.confirm) {
           const result = markAsMissed(queueId, currentPlatform.id, currentPlatform.name, '用户未到');
@@ -93,11 +102,14 @@ const QueuePage: React.FC = () => {
 
           if (missedResult.shouldVoid) {
             updateBookingStatus(item.bookingId, 'void');
-            Taro.showToast({ title: '连续3次过号，预约已作废', icon: 'none', duration: 2500 });
+            Taro.showToast({ title: `连续${MAX_MISSED_COUNT}次过号，预约已作废`, icon: 'none', duration: 2500 });
           } else if (result.movedToTail) {
-            Taro.showToast({ title: `过号重排队尾（${item.missedCount + 1}/${MAX_MISSED_COUNT}）`, icon: 'none' });
+            const newMissedCount = item.missedCount + 1;
+            Taro.showToast({ title: `过号重排队尾（${newMissedCount}/${MAX_MISSED_COUNT}）`, icon: 'none' });
+          } else if (result.voided) {
+            Taro.showToast({ title: '预约已作废', icon: 'none' });
           }
-          console.log('[Queue] Marked missed:', queueId, 'void:', result.voided);
+          console.log('[Queue] Marked missed:', queueId, 'void:', result.voided, 'newMissed:', item.missedCount + 1);
         }
       }
     });
@@ -124,15 +136,93 @@ const QueuePage: React.FC = () => {
     }
   };
 
+  const queueableBookings = useMemo(() => {
+    if (!currentPlatform) return [];
+    return getBookingsByGroup(currentGroupId).filter(b =>
+      b.platformId === currentPlatform.id &&
+      b.status === 'confirmed' &&
+      !['completed', 'cancelled', 'void'].includes(b.status) &&
+      !queue.some(q => q.bookingId === b.id && q.status !== 'completed' && q.status !== 'void')
+    );
+  }, [currentPlatform, currentGroupId, getBookingsByGroup, queue]);
+
   const handleQuickQueue = () => {
     if (!currentPlatform) {
       Taro.showToast({ title: '请先选择跳台', icon: 'none' });
       return;
     }
 
-    const confirmedBookings = getBookingById ? [] : [];
-    Taro.navigateTo({
-      url: '/pages/health-commitment/index?platformId=' + currentPlatform.id
+    const available = queueableBookings;
+    if (available.length === 0) {
+      Taro.showModal({
+        title: '暂无可排队预约',
+        content: `您在「${currentPlatform.name}」暂无已确认且未在排队中的预约。\n请先到跳台排期页面预约时段。`,
+        confirmText: '去预约',
+        cancelText: '知道了',
+        success: (res) => {
+          if (res.confirm) {
+            Taro.switchTab({ url: '/pages/index/index' });
+          }
+        }
+      });
+      return;
+    }
+
+    if (available.length === 1) {
+      const booking = available[0];
+      if (!booking.healthCommitted) {
+        Taro.navigateTo({
+          url: `/pages/health-commitment/index?bookingId=${booking.id}&platformId=${booking.platformId}`
+        });
+      } else {
+        Taro.showModal({
+          title: '加入排队',
+          content: `使用预约「${booking.groupName}」\n时段：${booking.startTime}-${booking.endTime}，共${booking.timeSlotIds.length}个时段\n确定加入「${currentPlatform.name}」排队队列吗？`,
+          success: (res) => {
+            if (res.confirm) {
+              addToQueue({
+                bookingId: booking.id,
+                platformId: booking.platformId,
+                groupName: booking.groupName,
+                peopleCount: booking.peopleCount
+              });
+              updateBookingStatus(booking.id, 'queuing');
+              Taro.showToast({ title: '已加入排队', icon: 'success' });
+              console.log('[Queue] Quick queue joined:', booking.id);
+            }
+          }
+        });
+      }
+      return;
+    }
+
+    Taro.showActionSheet({
+      itemList: available.map(b => `${b.groupName} · ${b.startTime}-${b.endTime}（${b.timeSlotIds.length}时段）${b.healthCommitted ? '' : ' · 未签承诺'}）`),
+      success: (res) => {
+        const booking = available[res.tapIndex];
+        if (!booking.healthCommitted) {
+          Taro.navigateTo({
+            url: `/pages/health-commitment/index?bookingId=${booking.id}&platformId=${booking.platformId}`
+          });
+        } else {
+          Taro.showModal({
+            title: '加入排队',
+            content: `使用预约「${booking.groupName}」\n时段：${booking.startTime}-${booking.endTime}\n确定加入排队吗？`,
+            success: (res) => {
+              if (res.confirm) {
+                addToQueue({
+                  bookingId: booking.id,
+                  platformId: booking.platformId,
+                  groupName: booking.groupName,
+                  peopleCount: booking.peopleCount
+                });
+                updateBookingStatus(booking.id, 'queuing');
+                Taro.showToast({ title: '已加入排队', icon: 'success' });
+              }
+            }
+          });
+        }
+      }
     });
   };
 
@@ -308,6 +398,37 @@ const QueuePage: React.FC = () => {
               {currentPlatform?.name}暂无排队队伍\n点击"取号排队"开始预约体验
             </Text>
           </View>
+        )}
+
+        {currentPlatformMissedRecords.length > 0 && (
+          <>
+            <Text className={styles.sectionSub}>⚠️ 今日过号记录</Text>
+            <View className={styles.missedList}>
+              {currentPlatformMissedRecords.map(record => (
+                <View key={record.id} className={styles.missedItem}>
+                  <View className={styles.missedIcon}>
+                    <Text>⏰</Text>
+                  </View>
+                  <View className={styles.missedContent}>
+                    <Text className={styles.missedTitle}>
+                      第 {record.queueNumber} 号 · {record.groupName}
+                    </Text>
+                    <View className={styles.missedMeta}>
+                      <Text>{record.platformName}</Text>
+                      <Text> · </Text>
+                      <Text>{formatTime(record.missedAt)}</Text>
+                      {record.reason && (
+                        <>
+                          <Text> · </Text>
+                          <Text className={styles.missedReason}>{record.reason}</Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
         )}
       </View>
     </ScrollView>
