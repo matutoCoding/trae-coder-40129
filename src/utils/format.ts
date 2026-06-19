@@ -1,18 +1,39 @@
 import dayjs from 'dayjs';
 
+const isHHmm = (s: any): boolean => {
+  return typeof s === 'string' && /^\d{1,2}:\d{2}$/.test(s.trim());
+};
+
+const safeDayjs = (date: string | Date): dayjs.Dayjs => {
+  const d = dayjs(date);
+  if (d.isValid()) return d;
+  if (isHHmm(date)) {
+    return dayjs(`2024-01-01 ${(date as string).trim()}`);
+  }
+  return d;
+};
+
 export const formatDate = (date: string | Date, format = 'YYYY-MM-DD'): string => {
-  return dayjs(date).format(format);
+  if (!date) return '';
+  return safeDayjs(date).format(format);
 };
 
 export const formatDateTime = (date: string | Date, format = 'YYYY-MM-DD HH:mm'): string => {
-  return dayjs(date).format(format);
+  if (!date) return '';
+  if (isHHmm(date)) {
+    return `${dayjs().format('YYYY-MM-DD')} ${(date as string).trim()}`;
+  }
+  return safeDayjs(date).format(format);
 };
 
 export const formatTime = (date: string | Date, format = 'HH:mm'): string => {
-  return dayjs(date).format(format);
+  if (!date) return '';
+  if (isHHmm(date)) return (date as string).trim();
+  return safeDayjs(date).format(format);
 };
 
 export const formatTimeRange = (start: string, end: string): string => {
+  if (!start || !end) return '';
   return `${formatTime(start)} - ${formatTime(end)}`;
 };
 

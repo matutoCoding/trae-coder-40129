@@ -279,15 +279,18 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   updateBookingStatus: (id, status, description) => set((state) => ({
     bookings: state.bookings.map(b => {
       if (b.id !== id) return b;
-      const map: Partial<Record<BookingStatus, string>> = {
-        queuing: '已进入排队队列',
-        jumping: '正在体验',
-        completed: '体验完成',
-        cancelled: '已取消',
-        void: '预约已作废'
+      const statusToEvent: Partial<Record<BookingStatus, { type: TimelineEventType; label: string }>> = {
+        queuing: { type: 'queued', label: '已进入排队队列' },
+        jumping: { type: 'jumping', label: '正在体验' },
+        completed: { type: 'completed', label: '体验完成' },
+        cancelled: { type: 'cancelled', label: '已取消' },
+        void: { type: 'void', label: '预约已作废' }
       };
       const events: TimelineEvent[] = [];
-      if (map[status]) events.push(makeTimelineEvent(status as TimelineEventType, description || map[status]));
+      const mapping = statusToEvent[status];
+      if (mapping) {
+        events.push(makeTimelineEvent(mapping.type, description || mapping.label));
+      }
       return {
         ...b,
         status,

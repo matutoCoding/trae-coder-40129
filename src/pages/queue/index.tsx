@@ -24,7 +24,7 @@ const DASHBOARD_STATUS: Array<{ key: QueueStatus | 'all'; label: string; icon: s
 const QueuePage: React.FC = () => {
   const { platforms, selectedPlatformId, setSelectedPlatformId } = usePlatformStore();
   const { queue, getQueueByPlatform, getCurrentCalling, callNext, confirmArrival, markAsMissed, markAsCompleted, addToQueue } = useQueueStore();
-  const { missedRecords, getBookingById, updateBookingStatus, incrementMissedCount, addMissedRecord, getBookingsByGroup } = useBookingStore();
+  const { missedRecords, getBookingById, updateBookingStatus, incrementMissedCount, addMissedRecord, getBookingsByGroup, addTimelineEvent } = useBookingStore();
   const { currentGroupId, userName } = useUserStore();
 
   const [adminMode, setAdminMode] = useState(true);
@@ -56,10 +56,10 @@ const QueuePage: React.FC = () => {
       .filter(p => p.status === 'open')
       .map(p => {
         const items = queue.filter(q => q.platformId === p.id);
-        const waiting = items.filter(q => q.status === 'waiting').length;
+        const waiting = items.filter(q => q.status === 'waiting' && q.missedCount === 0).length;
         const calling = items.filter(q => q.status === 'calling').length;
         const jumping = items.filter(q => q.status === 'jumping').length;
-        const missed = items.filter(q => q.status === 'missed').length;
+        const missed = items.filter(q => q.status === 'missed' || (q.status === 'waiting' && q.missedCount > 0)).length;
         const completed = items.filter(q => q.status === 'completed').length;
         return {
           platformId: p.id,
@@ -85,7 +85,7 @@ const QueuePage: React.FC = () => {
   }, [dashboardStats]);
 
   const waitingList = useMemo(
-    () => platformQueue.filter(q => q.status === 'waiting'),
+    () => platformQueue.filter(q => q.status === 'waiting' && q.missedCount === 0),
     [platformQueue]
   );
 
@@ -100,7 +100,9 @@ const QueuePage: React.FC = () => {
   );
 
   const missedList = useMemo(
-    () => platformQueue.filter(q => q.status === 'missed'),
+    () => platformQueue
+      .filter(q => q.status === 'missed' || (q.status === 'waiting' && q.missedCount > 0))
+      .sort((a, b) => a.position - b.position),
     [platformQueue]
   );
 
@@ -177,6 +179,11 @@ const QueuePage: React.FC = () => {
             Taro.showToast({ title: `连续${MAX_MISSED_COUNT}次过号，预约已作废`, icon: 'none', duration: 2500 });
           } else if (result.movedToTail) {
             const newMissedCount = item.missedCount + 1;
+            addTimelineEvent(item.bookingId, {
+              type: 'requeued',
+              time: new Date().toISOString(),
+              description: `🔁 过号重排队尾（${newMissedCount}/${MAX_MISSED_COUNT}）`
+            });
             Taro.showToast({ title: `过号重排队尾（${newMissedCount}/${MAX_MISSED_COUNT}）`, icon: 'none' });
           } else if (result.voided) {
             Taro.showToast({ title: '预约已作废', icon: 'none' });
@@ -201,7 +208,11 @@ const QueuePage: React.FC = () => {
     const next = callNext(currentPlatform.id);
     if (next) {
       Taro.showToast({ title: `请第${next.queueNumber}号上跳台`, icon: 'none' });
-      updateBookingStatus(next.bookingId, 'queuing');
+      addTimelineEvent(next.bookingId, {
+        type: 'calling',
+        time: new Date().toISOString(),
+        description: `📢 开始叫第 ${next.queueNumber} 号`
+      });
       console.log('[Queue] Called next:', next.id, next.queueNumber);
     } else {
       Taro.showToast({ title: '暂无等待队列', icon: 'none' });

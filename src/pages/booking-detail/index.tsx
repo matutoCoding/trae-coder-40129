@@ -50,7 +50,7 @@ const BookingDetailPage: React.FC = () => {
   const router = useRouter();
   const bookingId = router.params.id as string;
 
-  const { getBookingById, cancelBooking, missedRecords, getBookingsByGroup } = useBookingStore();
+  const { getBookingById, cancelBooking, missedRecords, getBookingsByGroup, updateBookingStatus } = useBookingStore();
   const { getPlatformById } = usePlatformStore();
   const { getQueuePosition, addToQueue } = useQueueStore();
   const { getHealthCommitment, userName } = useUserStore();
@@ -200,6 +200,7 @@ const BookingDetailPage: React.FC = () => {
             groupName: booking.groupName,
             peopleCount: booking.peopleCount
           });
+          updateBookingStatus(booking.id, 'queuing');
           Taro.showToast({ title: '已加入排队', icon: 'success' });
           console.log('[BookingDetail] Joined queue for booking:', booking.id);
           setTimeout(() => Taro.switchTab({ url: '/pages/queue/index' }), 800);
