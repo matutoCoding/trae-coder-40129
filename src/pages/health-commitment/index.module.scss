@@ -1,0 +1,413 @@
+@import '@/styles/variables.scss';
+
+.page {
+  min-height: 100vh;
+  background: #F7F8FA;
+  padding-bottom: 200rpx;
+}
+
+.header {
+  background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+  padding: 48rpx 32rpx 80rpx;
+  color: #fff;
+}
+
+.headerTitle {
+  font-size: 44rpx;
+  font-weight: 700;
+  margin-bottom: 16rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.headerDesc {
+  font-size: 26rpx;
+  opacity: 0.9;
+  line-height: 1.6;
+}
+
+.content {
+  padding: 0 24rpx;
+  margin-top: -48rpx;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28rpx;
+}
+
+.cardTitle {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1D2129;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.required {
+  color: #F53F3F;
+  font-size: 28rpx;
+  margin-left: 4rpx;
+}
+
+.tipCard {
+  background: linear-gradient(135deg, #FFF7E8 0%, #FFFDF5 100%);
+  border: 2rpx solid #FFE4BA;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 28rpx;
+}
+
+.tipText {
+  font-size: 26rpx;
+  color: #865100;
+  line-height: 1.7;
+}
+
+.tipTitle {
+  display: block;
+  font-weight: 600;
+  font-size: 28rpx;
+  margin-bottom: 12rpx;
+  color: #FF7D00;
+}
+
+.healthCheckList {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  padding: 28rpx 24rpx;
+  background: #F7F8FA;
+  border-radius: 16rpx;
+  border: 2rpx solid transparent;
+  transition: all 0.2s;
+}
+
+.checkItemChecked {
+  background: #FFF0E8;
+  border-color: #FF6B35;
+}
+
+.checkBox {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  border: 3rpx solid #C9CDD4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20rpx;
+  margin-top: 4rpx;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.checkBoxChecked {
+  background: #FF6B35;
+  border-color: #FF6B35;
+}
+
+.checkIcon {
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.checkContent {
+  flex: 1;
+}
+
+.checkTitle {
+  display: block;
+  font-size: 28rpx;
+  color: #1D2129;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.checkDesc {
+  font-size: 24rpx;
+  color: #86909C;
+  line-height: 1.5;
+}
+
+.checkSubtitle {
+  display: block;
+  font-size: 24rpx;
+  color: #86909C;
+  margin-bottom: 20rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #F2F3F5;
+}
+
+.formRow {
+  margin-bottom: 28rpx;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.formLabel {
+  display: block;
+  font-size: 28rpx;
+  color: #4E5969;
+  font-weight: 500;
+  margin-bottom: 16rpx;
+}
+
+.formInputRow {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.formInput {
+  flex: 1;
+  height: 88rpx;
+  padding: 0 24rpx;
+  background: #F7F8FA;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  color: #1D2129;
+  border: 2rpx solid transparent;
+}
+
+.formInputFocus {
+  background: #fff;
+  border-color: #FF6B35;
+}
+
+.formUnit {
+  font-size: 28rpx;
+  color: #86909C;
+  flex-shrink: 0;
+}
+
+.infoRow {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #F2F3F5;
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  &:first-child {
+    padding-top: 0;
+  }
+}
+
+.infoLabel {
+  width: 180rpx;
+  font-size: 28rpx;
+  color: #86909C;
+  flex-shrink: 0;
+}
+
+.infoValue {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1D2129;
+  font-weight: 500;
+}
+
+.agreementSection {
+  padding: 28rpx;
+  background: #F7F8FA;
+  border-radius: 16rpx;
+}
+
+.agreementTitle {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1D2129;
+  margin-bottom: 16rpx;
+}
+
+.agreementText {
+  font-size: 24rpx;
+  color: #4E5969;
+  line-height: 1.8;
+  margin-bottom: 12rpx;
+}
+
+.agreementConfirm {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid #E5E6EB;
+}
+
+.agreeCheckBox {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 8rpx;
+  border: 3rpx solid #C9CDD4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16rpx;
+  margin-top: 4rpx;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.agreeCheckBoxChecked {
+  background: #00B42A;
+  border-color: #00B42A;
+}
+
+.agreeCheckIcon {
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.agreeText {
+  flex: 1;
+  font-size: 26rpx;
+  color: #4E5969;
+  line-height: 1.6;
+}
+
+.agreeHighlight {
+  color: #FF6B35;
+  font-weight: 600;
+}
+
+.signatureSection {
+  margin-top: 8rpx;
+}
+
+.signatureLabel {
+  display: block;
+  font-size: 28rpx;
+  color: #4E5969;
+  font-weight: 500;
+  margin-bottom: 16rpx;
+}
+
+.signatureInput {
+  width: 100%;
+  height: 88rpx;
+  padding: 0 24rpx;
+  background: #F7F8FA;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  color: #1D2129;
+  border: 2rpx solid transparent;
+}
+
+.signatureInputFocus {
+  background: #fff;
+  border-color: #FF6B35;
+}
+
+.bottomBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 24rpx 32rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.06);
+  display: flex;
+  gap: 20rpx;
+  align-items: center;
+}
+
+.btn {
+  flex: 1;
+  height: 96rpx;
+  line-height: 96rpx;
+  text-align: center;
+  border-radius: 48rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.btnSecondary {
+  background: #F2F3F5;
+  color: #4E5969;
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+  color: #fff;
+  box-shadow: 0 8rpx 24rpx rgba(255, 107, 53, 0.3);
+}
+
+.btnDisabled {
+  opacity: 0.5;
+}
+
+.btnFull {
+  flex: 2;
+}
+
+.progressSteps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.2);
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 22rpx;
+  opacity: 0.8;
+}
+
+.stepItemActive {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.stepDot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.stepDotActive {
+  background: #fff;
+}
+
+.stepLine {
+  width: 32rpx;
+  height: 2rpx;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.stepLineDone {
+  background: rgba(255, 255, 255, 0.8);
+}

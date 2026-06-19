@@ -1,0 +1,54 @@
+// ============================================
+// 蹦极跳预约小程序 - 主题配色变量
+// ============================================
+
+// 品牌主题色：活力橙（体现蹦极运动的刺激与活力）
+$color-primary: #FF6B35;
+$color-primary-light: #FF8C5A;
+$color-primary-dark: #E55A2B;
+$color-primary-gradient: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+
+// 辅助色：天空蓝（代表高空与安全）
+$color-secondary: #00B4D8;
+$color-secondary-light: #48CAE4;
+$color-secondary-dark: #0096C7;
+
+// 功能色
+$color-success: #00B42A;
+$color-success-light: #23C343;
+$color-warning: #FF7D00;
+$color-warning-light: #FF9A2E;
+$color-error: #F53F3F;
+$color-error-light: #FF6B6B;
+$color-info: #165DFF;
+
+// 业务状态色
+$color-queue-active: #FF6B35;
+$color-queue-waiting: #00B4D8;
+$color-queue-done: #00B42A;
+$color-queue-missed: #F53F3F;
+$color-queue-void: #C9CDD4;
+
+// 背景色
+$color-bg-page: #F7F8FA;
+$color-bg-page-gradient: linear-gradient(180deg, #FFF5F0 0%, #F7F8FA 30%);
+$color-bg-card: #FFFFFF;
+$color-bg-hover: #F2F3F5;
+$color-bg-tag: #FFF0E8;
+$color-bg-tag-blue: #E6F7FF;
+$color-bg-tag-green: #E8FFEA;
+$color-bg-tag-red: #FFECE8;
+
+// 文本色
+$color-text-primary: #1D2129;
+$color-text-secondary: #4E5969;
+$color-text-tertiary: #86909C;
+$color-text-disabled: #C9CDD4;
+$color-text-white: #FFFFFF;
+$color-text-primary-on-dark: #FFFFFF;
+$color-text-secondary-on-dark: rgba(255, 255, 255, 0.8);
+
+// 边框色
+$color-border: #E5E6EB;
+$color-divider: #F2F3F5;
+$color-border-primary: #FF6B35;

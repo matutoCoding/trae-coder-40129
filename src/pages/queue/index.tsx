@@ -1,0 +1,317 @@
+import React, { useState, useMemo } from 'react';
+import { View, Text, ScrollView } from '@tarojs/components';
+import Taro, { useDidShow } from '@tarojs/taro';
+import classnames from 'classnames';
+import { usePlatformStore } from '@/store/usePlatformStore';
+import { useQueueStore } from '@/store/useQueueStore';
+import { useBookingStore } from '@/store/useBookingStore';
+import { useUserStore } from '@/store/useUserStore';
+import QueueCard from '@/components/QueueCard';
+import StatusBadge from '@/components/StatusBadge';
+import { formatTime, generateId } from '@/utils/format';
+import type { QueueItem } from '@/types';
+import { MAX_MISSED_COUNT } from '@/utils/booking';
+import styles from './index.module.scss';
+
+const QueuePage: React.FC = () => {
+  const { platforms, selectedPlatformId, setSelectedPlatformId } = usePlatformStore();
+  const { queue, getQueueByPlatform, getCurrentCalling, callNext, confirmArrival, markAsMissed, markAsCompleted, addToQueue, addMissedRecord } = useQueueStore();
+  const { missedRecords, getBookingById, updateBookingStatus, incrementMissedCount } = useBookingStore();
+  const { currentGroupId, userName } = useUserStore();
+
+  const [adminMode, setAdminMode] = useState(true);
+
+  useDidShow(() => {
+    console.log('[Queue] Page did show, queue length:', queue.length);
+  });
+
+  const currentPlatform = useMemo(
+    () => platforms.find(p => p.id === selectedPlatformId) || platforms[0],
+    [platforms, selectedPlatformId]
+  );
+
+  const currentCalling = useMemo(
+    () => currentPlatform ? getCurrentCalling(currentPlatform.id) : undefined,
+    [currentPlatform, getCurrentCalling, queue]
+  );
+
+  const platformQueue = useMemo(() => {
+    if (!currentPlatform) return [];
+    return getQueueByPlatform(currentPlatform.id)
+      .filter(q => q.status !== 'completed' && q.status !== 'void')
+      .sort((a, b) => a.position - b.position);
+  }, [currentPlatform, getQueueByPlatform, queue]);
+
+  const waitingList = useMemo(
+    () => platformQueue.filter(q => q.status === 'waiting'),
+    [platformQueue]
+  );
+
+  const jumpingList = useMemo(
+    () => platformQueue.filter(q => q.status === 'jumping'),
+    [platformQueue]
+  );
+
+  const stats = useMemo(() => {
+    const active = platformQueue.filter(q => q.status !== 'completed' && q.status !== 'void').length;
+    const done = queue.filter(q => q.platformId === currentPlatform?.id && q.status === 'completed').length;
+    return { active, waiting: waitingList.length, done };
+  }, [platformQueue, queue, waitingList, currentPlatform]);
+
+  const handleConfirmArrival = (queueId: string) => {
+    const item = queue.find(q => q.id === queueId);
+    if (!item) return;
+    confirmArrival(queueId);
+    updateBookingStatus(item.bookingId, 'jumping');
+    Taro.showToast({ title: '已确认到场', icon: 'success' });
+    console.log('[Queue] Confirmed arrival:', queueId);
+  };
+
+  const handleMarkMissed = (queueId: string) => {
+    const item = queue.find(q => q.id === queueId);
+    if (!item || !currentPlatform) return;
+
+    Taro.showModal({
+      title: '确认过号',
+      content: `确定将${item.groupName}（第${item.queueNumber}号）标记为过号吗？\n过号${MAX_MISSED_COUNT}次将自动作废预约`,
+      success: (res) => {
+        if (res.confirm) {
+          const result = markAsMissed(queueId, currentPlatform.id, currentPlatform.name, '用户未到');
+          const missedResult = incrementMissedCount(item.bookingId);
+
+          addMissedRecord({
+            id: generateId(),
+            bookingId: item.bookingId,
+            queueId,
+            queueNumber: item.queueNumber,
+            groupName: item.groupName,
+            platformId: currentPlatform.id,
+            platformName: currentPlatform.name,
+            missedAt: new Date().toISOString(),
+            reason: '用户未到'
+          });
+
+          if (missedResult.shouldVoid) {
+            updateBookingStatus(item.bookingId, 'void');
+            Taro.showToast({ title: '连续3次过号，预约已作废', icon: 'none', duration: 2500 });
+          } else if (result.movedToTail) {
+            Taro.showToast({ title: `过号重排队尾（${item.missedCount + 1}/${MAX_MISSED_COUNT}）`, icon: 'none' });
+          }
+          console.log('[Queue] Marked missed:', queueId, 'void:', result.voided);
+        }
+      }
+    });
+  };
+
+  const handleMarkCompleted = (queueId: string) => {
+    const item = queue.find(q => q.id === queueId);
+    if (!item) return;
+    markAsCompleted(queueId);
+    updateBookingStatus(item.bookingId, 'completed');
+    Taro.showToast({ title: '已完成', icon: 'success' });
+    console.log('[Queue] Marked completed:', queueId);
+  };
+
+  const handleCallNext = () => {
+    if (!currentPlatform) return;
+    const next = callNext(currentPlatform.id);
+    if (next) {
+      Taro.showToast({ title: `请第${next.queueNumber}号上跳台`, icon: 'none' });
+      updateBookingStatus(next.bookingId, 'queuing');
+      console.log('[Queue] Called next:', next.id, next.queueNumber);
+    } else {
+      Taro.showToast({ title: '暂无等待队列', icon: 'none' });
+    }
+  };
+
+  const handleQuickQueue = () => {
+    if (!currentPlatform) {
+      Taro.showToast({ title: '请先选择跳台', icon: 'none' });
+      return;
+    }
+
+    const confirmedBookings = getBookingById ? [] : [];
+    Taro.navigateTo({
+      url: '/pages/health-commitment/index?platformId=' + currentPlatform.id
+    });
+  };
+
+  const toggleAdminMode = () => {
+    setAdminMode(!adminMode);
+  };
+
+  return (
+    <ScrollView scrollY className={styles.page} enhanced>
+      <View className={styles.currentSection}>
+        <View className={classnames(styles.currentLabel, adminMode && {})}>
+          当前叫号 · {currentPlatform?.name || '未选择'}
+        </View>
+
+        {currentCalling ? (
+          <>
+            <View className={styles.currentCalling}>
+              <View className={styles.currentNumberWrap}>
+                <Text className={styles.currentNumber}>
+                  {String(currentCalling.queueNumber).padStart(2, '0')}
+                </Text>
+                <Text className={styles.currentSuffix}>号</Text>
+              </View>
+              <View className={styles.currentInfo}>
+                <Text className={styles.currentGroup}>{currentCalling.groupName}</Text>
+                <View className={styles.currentMeta}>
+                  <View className={styles.currentMetaItem}>
+                    <Text>👥</Text>
+                    <Text className={styles.currentMetaText}>{currentCalling.peopleCount}人</Text>
+                  </View>
+                  <View className={styles.currentMetaItem}>
+                    <Text>🔔</Text>
+                    <Text className={styles.currentMetaText}>
+                      {currentCalling.calledAt ? formatTime(currentCalling.calledAt) : '--:--'}
+                    </Text>
+                  </View>
+                  {currentCalling.missedCount > 0 && (
+                    <View className={styles.currentMetaItem}>
+                      <Text>⚠️</Text>
+                      <Text className={styles.currentMetaText}>
+                        过号{currentCalling.missedCount}次
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            <View className={styles.actionBar}>
+              <View
+                className={classnames(styles.actionBtn, styles.actionBtnPrimary)}
+                onClick={() => handleConfirmArrival(currentCalling.id)}
+              >
+                <Text>✓ 确认到场</Text>
+              </View>
+              <View
+                className={classnames(styles.actionBtn, styles.actionBtnSecondary)}
+                onClick={() => handleMarkMissed(currentCalling.id)}
+              >
+                <Text>✗ 过号重排</Text>
+              </View>
+            </View>
+          </>
+        ) : (
+          <View style={{ padding: '32rpx 0' }}>
+            <Text style={{ fontSize: '32rpx', color: 'rgba(255,255,255,0.9)', fontWeight: 500 }}>
+              {waitingList.length > 0 ? '点击下方按钮开始叫号' : '暂无等待队伍'}
+            </Text>
+            {waitingList.length > 0 && (
+              <View
+                className={classnames(styles.actionBtn, styles.actionBtnPrimary)}
+                style={{ marginTop: '24rpx', width: 'auto', padding: '0 48rpx' }}
+                onClick={handleCallNext}
+              >
+                <Text>🎯 叫下一号</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
+      <View className={styles.section}>
+        <View className={styles.sectionHeader}>
+          <Text className={styles.sectionTitle}>🏗️ 选择跳台</Text>
+        </View>
+
+        <ScrollView scrollX enhanced showScrollbar={false}>
+          <View className={styles.platformSelector}>
+            {platforms
+              .filter(p => p.status === 'open')
+              .map(p => (
+                <View
+                  key={p.id}
+                  className={classnames(styles.platformTab, p.id === currentPlatform?.id && styles.active)}
+                  onClick={() => setSelectedPlatformId(p.id)}
+                >
+                  <Text className={styles.platformTabText}>{p.name}</Text>
+                </View>
+              ))}
+          </View>
+        </ScrollView>
+      </View>
+
+      <View className={styles.section}>
+        <View className={styles.sectionHeader}>
+          <Text className={styles.sectionTitle}>
+            📋 排队队列
+            <Text className={styles.sectionBadge}>{stats.active}</Text>
+          </Text>
+          <StatusBadge
+            text={`等待${stats.waiting}人`}
+            type="info"
+            size="sm"
+          />
+        </View>
+
+        <View className={styles.quickQueueCard}>
+          <Text className={styles.quickQueueTitle}>⚡ 快速取号排队</Text>
+          <Text className={styles.quickQueueDesc}>
+            到场后可在此处取号进入排队队列。取号前需签署健康承诺书，过号3次预约将自动作废。
+          </Text>
+          <View className={styles.quickQueueBtn} onClick={handleQuickQueue}>
+            <Text className={styles.quickQueueBtnText}>取号排队</Text>
+          </View>
+        </View>
+
+        <View className={styles.tipCard}>
+          <Text className={styles.tipText}>
+            💡 <Text className={styles.tipStrong}>叫号规则：</Text>
+            叫到号后请在5分钟内上跳台，超时未到视为过号，过号后移至队尾重新排队。
+            连续<Text className={styles.tipStrong}>3次</Text>过号将自动作废预约。
+          </Text>
+        </View>
+
+        {jumpingList.length > 0 && (
+          <>
+            <Text className={styles.sectionSub}>🎢 正在体验</Text>
+            <View className={styles.queueList}>
+              {jumpingList.map((q: QueueItem) => (
+                <QueueCard
+                  key={q.id}
+                  queue={q}
+                  showActions={adminMode}
+                  onMarkCompleted={() => handleMarkCompleted(q.id)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+
+        {waitingList.length > 0 && (
+          <>
+            <Text className={styles.sectionSub}>⏳ 等待中（{waitingList.length}人）</Text>
+            <View className={styles.queueList}>
+              {waitingList.map((q: QueueItem, index: number) => (
+                <QueueCard
+                  key={q.id}
+                  queue={q}
+                  showActions={adminMode}
+                  positionLabel={`第${index + 1}位`}
+                  onConfirmArrival={() => handleConfirmArrival(q.id)}
+                  onMarkMissed={() => handleMarkMissed(q.id)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+
+        {platformQueue.length === 0 && (
+          <View className={styles.emptyState}>
+            <Text className={styles.emptyIcon}>🎯</Text>
+            <Text className={styles.emptyText}>
+              {currentPlatform?.name}暂无排队队伍\n点击"取号排队"开始预约体验
+            </Text>
+          </View>
+        )}
+      </View>
+    </ScrollView>
+  );
+};
+
+export default QueuePage;

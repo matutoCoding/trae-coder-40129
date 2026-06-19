@@ -1,0 +1,431 @@
+@import '@/styles/variables.scss';
+
+.page {
+  min-height: 100vh;
+  background: #F7F8FA;
+  padding-bottom: 200rpx;
+}
+
+.header {
+  background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+  padding: 40rpx 32rpx 60rpx;
+  color: #fff;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32rpx;
+}
+
+.headerTitle {
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.headerBadge {
+  padding: 8rpx 24rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 24rpx;
+  font-size: 24rpx;
+}
+
+.headerInfo {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+
+  & > text {
+    font-size: 28rpx;
+    opacity: 0.95;
+  }
+}
+
+.headerTime {
+  font-size: 56rpx;
+  font-weight: 700;
+  margin-top: 24rpx;
+  letter-spacing: 2rpx;
+}
+
+.content {
+  padding: 0 24rpx;
+  margin-top: -36rpx;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28rpx;
+}
+
+.cardTitle {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1D2129;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.infoRow {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #F2F3F5;
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  &:first-child {
+    padding-top: 0;
+  }
+}
+
+.infoLabel {
+  width: 180rpx;
+  font-size: 28rpx;
+  color: #86909C;
+  flex-shrink: 0;
+}
+
+.infoValue {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1D2129;
+  font-weight: 500;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  margin-left: 12rpx;
+}
+
+.tagMerged {
+  background: #E6F7FF;
+  color: #00B4D8;
+}
+
+.slotsSection {
+  margin-bottom: 16rpx;
+}
+
+.slotsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.slotsTitle {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #4E5969;
+}
+
+.slotsHint {
+  font-size: 24rpx;
+  color: #86909C;
+}
+
+.slotsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.slotItem {
+  position: relative;
+  min-width: 180rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 12rpx;
+  background: #F7F8FA;
+  border: 2rpx solid #E5E6EB;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.slotItemSelected {
+  background: #FFF0E8;
+  border-color: #FF6B35;
+
+  .slotTime {
+    color: #FF6B35;
+    font-weight: 600;
+  }
+}
+
+.slotItemStart {
+  border-left: 4rpx solid #165DFF;
+}
+
+.slotItemEnd {
+  border-right: 4rpx solid #165DFF;
+}
+
+.slotItemMerged {
+  border-style: dashed;
+  border-color: #00B4D8;
+}
+
+.slotItemMerged.slotItemSelected {
+  border-color: #FF6B35;
+  border-style: dashed;
+}
+
+.slotTime {
+  font-size: 28rpx;
+  color: #1D2129;
+  font-weight: 500;
+}
+
+.slotIndex {
+  font-size: 22rpx;
+  color: #86909C;
+  margin-top: 8rpx;
+}
+
+.slotCheck {
+  position: absolute;
+  top: -12rpx;
+  right: -12rpx;
+  width: 36rpx;
+  height: 36rpx;
+  background: #FF6B35;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.statsRow {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 24rpx;
+}
+
+.statBox {
+  flex: 1;
+  padding: 24rpx;
+  border-radius: 12rpx;
+  background: #F7F8FA;
+  text-align: center;
+}
+
+.statValue {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1D2129;
+  margin-bottom: 8rpx;
+}
+
+.statLabel {
+  font-size: 24rpx;
+  color: #86909C;
+}
+
+.statValueOrange {
+  color: #FF6B35;
+}
+
+.statValueRed {
+  color: #F53F3F;
+}
+
+.statValueGreen {
+  color: #00B42A;
+}
+
+.missedItem {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  background: #FFECE8;
+  border-radius: 12rpx;
+  margin-bottom: 16rpx;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.missedIcon {
+  width: 64rpx;
+  height: 64rpx;
+  background: #F53F3F;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.missedContent {
+  flex: 1;
+}
+
+.missedTitle {
+  display: block;
+  font-size: 28rpx;
+  color: #1D2129;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.missedMeta {
+  font-size: 24rpx;
+  color: #86909C;
+}
+
+.healthCard {
+  display: flex;
+  align-items: center;
+  padding: 28rpx;
+  border-radius: 16rpx;
+  background: linear-gradient(135deg, #E8FFEA 0%, #F0FFF4 100%);
+  border: 2rpx solid #00B42A;
+}
+
+.healthCardPending {
+  background: linear-gradient(135deg, #FFF7E8 0%, #FFFDF5 100%);
+  border-color: #FF7D00;
+}
+
+.healthIcon {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: rgba(0, 180, 42, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+
+.healthCardPending .healthIcon {
+  background: rgba(255, 125, 0, 0.15);
+}
+
+.healthContent {
+  flex: 1;
+}
+
+.healthTitle {
+  display: block;
+  font-size: 30rpx;
+  color: #1D2129;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.healthDesc {
+  font-size: 24rpx;
+  color: #4E5969;
+}
+
+.healthAction {
+  padding: 12rpx 28rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  color: #FF7D00;
+  font-weight: 500;
+}
+
+.bottomBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 24rpx 32rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.06);
+  display: flex;
+  gap: 20rpx;
+  align-items: center;
+}
+
+.btn {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.btnSecondary {
+  background: #F2F3F5;
+  color: #4E5969;
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+  color: #fff;
+}
+
+.btnDanger {
+  background: #FFECE8;
+  color: #F53F3F;
+}
+
+.btnDisabled {
+  opacity: 0.5;
+}
+
+.btnFull {
+  flex: 2;
+}
+
+.emptyState {
+  padding: 120rpx 0;
+  text-align: center;
+}
+
+.emptyIcon {
+  display: block;
+  font-size: 120rpx;
+  margin-bottom: 32rpx;
+}
+
+.emptyText {
+  display: block;
+  font-size: 30rpx;
+  color: #86909C;
+  margin-bottom: 32rpx;
+}
+
+.emptyAction {
+  display: inline-block;
+  padding: 20rpx 48rpx;
+  background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+  color: #fff;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+}

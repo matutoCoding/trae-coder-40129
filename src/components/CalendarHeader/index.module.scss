@@ -1,0 +1,73 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  width: 100%;
+  margin-bottom: $spacing-md;
+}
+
+.scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.dateList {
+  display: inline-flex;
+  gap: $spacing-sm;
+  padding: $spacing-xs 0;
+}
+
+.dateItem {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 120rpx;
+  padding: $spacing-md $spacing-sm;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  position: relative;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &.selected {
+    background: $color-primary-gradient;
+    box-shadow: 0 4rpx 16rpx rgba(255, 107, 53, 0.3);
+  }
+}
+
+.label {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+
+  .selected & {
+    color: $color-text-white;
+  }
+}
+
+.weekday {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+
+  .selected & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.indicator {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: $radius-round;
+  background: transparent;
+  margin-top: $spacing-xs;
+  transition: all $transition-base;
+
+  &.indicatorActive {
+    background: $color-text-white;
+  }
+}

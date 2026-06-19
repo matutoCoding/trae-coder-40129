@@ -1,0 +1,199 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.98);
+    opacity: 0.95;
+  }
+
+  &.cancelled {
+    opacity: 0.6;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.platformRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex: 1;
+}
+
+.platformName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.mergedTag {
+  background: $color-bg-tag-blue;
+  color: $color-secondary;
+  padding: 6rpx 16rpx;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+}
+
+.groupInfo {
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.groupName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.peopleCount {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  background: $color-bg-hover;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-sm;
+}
+
+.timeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-lg;
+  margin-bottom: $spacing-md;
+}
+
+.timeItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.timeIcon {
+  font-size: $font-size-md;
+}
+
+.timeText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.contactRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.contactLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.contactValue {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.phoneValue {
+  color: $color-text-tertiary;
+  font-weight: $font-weight-normal;
+}
+
+.queueRow, .missedRow, .warningRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-sm;
+}
+
+.queueRow {
+  background: $color-bg-tag-blue;
+}
+
+.queueIcon, .missedIcon, .warningIcon {
+  font-size: $font-size-md;
+}
+
+.queueText {
+  font-size: $font-size-sm;
+  color: $color-secondary;
+}
+
+.queuePos {
+  font-weight: $font-weight-bold;
+  font-size: $font-size-md;
+}
+
+.missedRow {
+  background: $color-bg-tag-red;
+}
+
+.missedText {
+  font-size: $font-size-sm;
+  color: $color-error;
+}
+
+.warningRow {
+  background: $color-bg-tag;
+}
+
+.warningText {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.actionRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+  padding-top: $spacing-md;
+  border-top: 1rpx solid $color-divider;
+}
+
+.actionBtn {
+  flex: 1;
+  height: $button-height-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  transition: all $transition-fast;
+
+  &:active {
+    transform: scale(0.96);
+    opacity: 0.85;
+  }
+}
+
+.cancelBtn {
+  background: $color-bg-hover;
+  color: $color-text-secondary;
+}
+
+.queueBtn {
+  background: $color-primary-gradient;
+  color: $color-text-white;
+}

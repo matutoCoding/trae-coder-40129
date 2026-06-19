@@ -1,0 +1,159 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  width: 100%;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+  padding: $spacing-md;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.legendBox {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: $radius-xs;
+  border: 1rpx solid $color-border;
+
+  &.available {
+    background: $color-bg-card;
+  }
+
+  &.selected {
+    background: $color-primary;
+  }
+
+  &.merged {
+    background: #E8F0FF;
+    border-color: #165DFF;
+  }
+
+  &.booked {
+    background: $color-bg-hover;
+  }
+}
+
+.legendText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+}
+
+.slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-md $spacing-sm;
+  border-radius: $radius-md;
+  background: $color-bg-card;
+  border: 2rpx solid $color-border;
+  transition: all $transition-fast;
+  min-height: 100rpx;
+  overflow: hidden;
+
+  &:active {
+    transform: scale(0.96);
+  }
+
+  &.available {
+    &:active {
+      border-color: $color-primary;
+      background: #FFF9F5;
+    }
+  }
+
+  &.selected {
+    background: $color-primary-gradient;
+    border-color: $color-primary;
+    box-shadow: 0 4rpx 12rpx rgba(255, 107, 53, 0.3);
+  }
+
+  &.booked {
+    background: $color-bg-hover;
+    border-color: $color-border;
+  }
+
+  &.merged {
+    border: 2rpx dashed #165DFF;
+  }
+
+  &.mergedStart {
+    border-left: 2rpx solid #165DFF;
+  }
+
+  &.mergedEnd {
+    border-right: 2rpx solid #165DFF;
+  }
+}
+
+.slotTime {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+
+  .selected & {
+    color: $color-text-white;
+  }
+
+  .booked & {
+    color: $color-text-tertiary;
+  }
+}
+
+.slotGroup {
+  font-size: $font-size-xs;
+  margin-top: 4rpx;
+  @include text-ellipsis;
+  max-width: 100%;
+}
+
+.selectedBadge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 32rpx;
+  height: 32rpx;
+  background: rgba(255, 255, 255, 0.3);
+  border-bottom-left-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.selectedCheck {
+  font-size: 20rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+}
+
+.tip {
+  margin-top: $spacing-lg;
+  padding: $spacing-md;
+  background: $color-bg-tag;
+  border-radius: $radius-md;
+  border-left: 6rpx solid $color-primary;
+}
+
+.tipText {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  line-height: 1.5;
+}

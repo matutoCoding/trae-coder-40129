@@ -1,0 +1,189 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+  transition: all $transition-base;
+
+  &:not(:last-child) {
+    margin-bottom: $spacing-md;
+  }
+
+  &.calling {
+    background: linear-gradient(135deg, #FFF5F0 0%, #FFFFFF 100%);
+    border: 2rpx solid $color-primary;
+    box-shadow: 0 4rpx 20rpx rgba(255, 107, 53, 0.2);
+  }
+
+  &.done {
+    opacity: 0.7;
+  }
+
+  &.voided {
+    opacity: 0.5;
+  }
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-lg $spacing-md;
+  background: linear-gradient(180deg, #FFF5F0 0%, #FFE8DC 100%);
+  min-width: 140rpx;
+
+  .calling & {
+    background: $color-primary-gradient;
+  }
+}
+
+.numberWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.number {
+  font-size: 56rpx;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+  line-height: 1;
+
+  .calling & {
+    color: $color-text-white;
+  }
+}
+
+.position {
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+
+  .calling & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.midSection {
+  flex: 1;
+  padding: $spacing-md $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: $spacing-sm;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+}
+
+.groupName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  flex: 1;
+}
+
+.infoRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+}
+
+.infoItem {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.infoIcon {
+  font-size: $font-size-sm;
+}
+
+.infoText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+
+  &.missed {
+    color: $color-error;
+  }
+}
+
+.actionRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-sm;
+  padding-top: $spacing-sm;
+  border-top: 1rpx solid $color-divider;
+}
+
+.actionBtn {
+  flex: 1;
+  height: $button-height-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  transition: all $transition-fast;
+
+  &:active {
+    transform: scale(0.96);
+    opacity: 0.85;
+  }
+}
+
+.primaryBtn {
+  background: $color-primary-gradient;
+  color: $color-text-white;
+}
+
+.dangerBtn {
+  background: $color-bg-tag-red;
+  color: $color-error;
+}
+
+.successBtn {
+  background: $color-bg-tag-green;
+  color: $color-success;
+}
+
+.callingIndicator {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: $spacing-md;
+}
+
+.callingDot {
+  width: 12rpx;
+  height: 12rpx;
+  background: $color-primary;
+  border-radius: $radius-round;
+  animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.3);
+  }
+}
